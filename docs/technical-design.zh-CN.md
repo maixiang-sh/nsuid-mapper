@@ -4,6 +4,8 @@
 
 这是独立的跨区商品编号映射库，只依赖 JavaScript / Web API，不依赖其他 Savanna 客户端。它不保存商品资料、不提供 HTTP 服务，也不内置数据库或缓存。
 
+`src/index.ts` 是唯一支持的包入口。导出范围与迁移方式见 [README](../README.md#public-exports)。经实际调用检查，`fetchIdentities` 和 `mapInto` 用于复用身份并逐国处理失败，保留为高级接口；其他内部辅助函数仍可在库内引用，不再全部从根入口公开。测试可直接引用内部模块，避免仅为测试而增加公共 API。
+
 - `src/client.ts`：公开方法、参数校验和目标国家并发调度。
 - `src/mapping.ts`：本体、DLC、合集的匹配决策。
 - `src/upstreams/savanna.ts`：必要的 GraphQL 查询、身份标准化和关联项分页。

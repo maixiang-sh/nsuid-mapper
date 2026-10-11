@@ -125,6 +125,48 @@ Selections must match the upstream object type; an invalid field can reject the
 whole query. `labelPlatform`, rather than `platform.id`, distinguishes editions
 in the mapping identity.
 
+## Public exports
+
+The package root exposes 18 runtime symbols, with no additional subpath entry points:
+
+| Purpose                      | Exports                                                                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Client and errors            | `NsuidMapper`, `NsuidMapError`, `MAX_REGIONS_PER_MAP`                                                                             |
+| ID and URL helpers           | `isAppId`, `isCatalogId`, `parseAppId`, `parseNsuid`, `itemKindFromNsuid`, `deriveBaseApplicationIdFromDlcAppId`, `buildAppIdUrl` |
+| Country context              | `contextFor`, `getCountryLanguageInfo`, `isCountryLanguageSupported`, `isMappable`                                                |
+| Advanced queries and mapping | `execute`, `SHOP_ID`, `fetchIdentities`, `mapInto`                                                                                |
+
+Input and result types remain exported, including `NsuidMapperOptions`, `MapOptions`,
+`RequestOptions`, `ResolveOptions`, `EnumerateOptions`, `NsuidMapping`, `RegionMapping`,
+`Identity`, `IdentityKind` and `AppIdResolver`. Types do not add runtime exports.
+
+Prefer `mapper.mapNsuid` for normal use. `fetchIdentities` plus `mapInto` supports
+reading the source identity once and handling target errors independently, as existing
+consumers do. These lower-level functions do not provide the client's input validation
+or target-count limit; callers must validate IDs/context and bound their own fan-out.
+`isMappable` describes a historical coverage snapshot and allows unknown countries;
+it is not a product-availability check.
+
+### Migrating from the previous root exports
+
+This is a breaking reduction of the root export surface. Client methods and matching
+behavior are unchanged. Existing vendored copies are not automatically updated.
+
+| Removed exports                                                                                                        | Replacement or guidance                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isNsuid`                                                                                                              | `isCatalogId`; the deprecated alias has been deleted                                                                                        |
+| `fetchAppIds`                                                                                                          | `mapper.resolveNsuidsToAppIds`                                                                                                              |
+| `normalizeRegion`                                                                                                      | `contextFor(region).country` for validated, normalized country codes                                                                        |
+| `parseAcdIndex`                                                                                                        | Pass the index to `buildAppIdUrl` or client methods, which validate it                                                                      |
+| `COMMON_REGIONS`, `CommonRegion`                                                                                       | Use explicit country strings; the duplicate list has been deleted                                                                           |
+| `MAPPABLE_COUNTRIES`, `UNMAPPABLE_COUNTRIES`, `MAPPABLE_COUNTRY_LANGUAGES`, `isKnownMappable`                          | Use `isMappable` for the known-dead-end policy, and the language helpers for context; these are not equivalent to enumerating the old lists |
+| `DEFAULT_ENUMERATE_MAX`, `MAX_ENUMERATE_LIMIT`, `DEFAULT_TIMEOUT_MS`, `DEFAULT_HEADERS`, `EC_BASE`, `SAVANNA_ENDPOINT` | Defaults and endpoint details are internal; configure client/request options when needed                                                    |
+| `extractNsuidFromLocation`, `parseStorefrontPath`, `pathKindFromSegment`, `collectContentAppIds`                       | Internal parsers; use client results or `fetchIdentities`                                                                                   |
+| `MappableKind`                                                                                                         | Use `IdentityKind` when describing returned identities; it also includes unsupported kinds                                                  |
+
+Do not replace these imports with deep imports into `src/` or `dist/`; those paths
+are implementation details rather than supported package entry points.
+
 ## Development
 
 Development uses Bun 1.4.3 and TypeScript 7.0.2. The built ESM library also supports

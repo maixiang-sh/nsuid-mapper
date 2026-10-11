@@ -11,13 +11,15 @@ import { describe, expect, test } from 'bun:test';
 import {
   MAPPABLE_COUNTRY_LANGUAGES,
   MAPPABLE_COUNTRIES,
+  UNMAPPABLE_COUNTRIES,
+  isKnownMappable,
+} from '../src/catalogs.ts';
+import {
   MAX_REGIONS_PER_MAP,
   NsuidMapper,
-  UNMAPPABLE_COUNTRIES,
   contextFor,
   getCountryLanguageInfo,
   isCountryLanguageSupported,
-  isKnownMappable,
   isMappable,
 } from '../src/index.ts';
 

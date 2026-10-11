@@ -26,25 +26,21 @@
  * ```
  */
 
-export { NsuidMapper, type NsuidMapperOptions } from './client.ts';
+// Main entry points and their input/output types.
 export {
-  COMMON_REGIONS,
-  DEFAULT_ENUMERATE_MAX,
-  DEFAULT_HEADERS,
-  DEFAULT_TIMEOUT_MS,
-  EC_BASE,
-  MAX_ENUMERATE_LIMIT,
-  type CommonRegion,
-} from './constants.ts';
+  NsuidMapper,
+  MAX_REGIONS_PER_MAP,
+  type NsuidMapperOptions,
+  type MapOptions,
+} from './client.ts';
 export { NsuidMapError } from './errors.ts';
+export type { NsuidMapping, RegionMapping, AppIdResolver } from './mapping.ts';
+export type { Identity, IdentityKind } from './upstreams/savanna.ts';
 export {
   deriveBaseApplicationIdFromDlcAppId,
   isAppId,
   isCatalogId,
-  isNsuid,
   itemKindFromNsuid,
-  normalizeRegion,
-  parseAcdIndex,
   parseAppId,
   parseNsuid,
 } from './ids.ts';
@@ -56,34 +52,10 @@ export type {
   RequestOptions,
   ResolveOptions,
 } from './types.ts';
-export {
-  buildAppIdUrl,
-  extractNsuidFromLocation,
-  parseStorefrontPath,
-  pathKindFromSegment,
-  type BuildAppIdUrlOptions,
-} from './upstreams/redirector.ts';
+export { buildAppIdUrl, type BuildAppIdUrlOptions } from './upstreams/redirector.ts';
 
-export {
-  fetchAppIds,
-  fetchIdentities,
-  collectContentAppIds,
-  execute,
-  SAVANNA_ENDPOINT,
-  SHOP_ID,
-} from './upstreams/savanna.ts';
-export type { Identity, IdentityKind, MappableKind } from './upstreams/savanna.ts';
+// Advanced composition is used by consumers that handle target failures independently.
+export { fetchIdentities, execute, SHOP_ID } from './upstreams/savanna.ts';
 export { contextFor, mapInto } from './mapping.ts';
-export {
-  UNMAPPABLE_COUNTRIES,
-  MAPPABLE_COUNTRIES,
-  MAPPABLE_COUNTRY_LANGUAGES,
-  getCountryLanguageInfo,
-  isCountryLanguageSupported,
-  isMappable,
-  isKnownMappable,
-} from './catalogs.ts';
+export { getCountryLanguageInfo, isCountryLanguageSupported, isMappable } from './catalogs.ts';
 export type { CountryLanguageInfo, MappableCountry, SavannaLanguage } from './catalogs.ts';
-export type { NsuidMapping, RegionMapping, AppIdResolver } from './mapping.ts';
-export { MAX_REGIONS_PER_MAP } from './client.ts';
-export type { MapOptions } from './client.ts';

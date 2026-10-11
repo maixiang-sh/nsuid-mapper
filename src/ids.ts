@@ -38,11 +38,6 @@ export function isCatalogId(value: string | number): boolean {
   return CATALOG_ID_RE.test(String(value).trim());
 }
 
-/** @deprecated Prefer {@link isCatalogId}. */
-export function isNsuid(value: string): boolean {
-  return isCatalogId(value);
-}
-
 /**
  * Best-effort kind hint from nsuid prefix (Nintendo convention).
  *

@@ -57,6 +57,19 @@ console.log(result.targets);
 
 完整参数见[英文 README](README.md)，自定义 GraphQL 查询见[可运行示例](examples/basic.ts)。
 
+## 公开接口
+
+根入口的运行时导出从 37 项收敛为 18 项，不新增子入口：
+
+- 常用入口：`NsuidMapper`、`NsuidMapError`、`MAX_REGIONS_PER_MAP`。
+- ID / URL 工具：`isAppId`、`isCatalogId`、`parseAppId`、`parseNsuid`、`itemKindFromNsuid`、`deriveBaseApplicationIdFromDlcAppId`、`buildAppIdUrl`。
+- 地区上下文：`contextFor`、`getCountryLanguageInfo`、`isCountryLanguageSupported`、`isMappable`。
+- 高级组合：`execute`、`SHOP_ID`、`fetchIdentities`、`mapInto`。
+
+参数、结果和身份类型继续导出。普通调用优先使用 `mapNsuid`；需要复用源身份、逐国处理失败的调用方可组合 `fetchIdentities` 与 `mapInto`，但需要自行校验输入、限制并发和目标数量。`isMappable` 是历史覆盖快照，未知国家也允许通过，不代表某商品一定可用。
+
+此次精简对旧导入存在不兼容变更，客户端方法和匹配规则不变。废弃的 `isNsuid` 改用 `isCatalogId`；`fetchAppIds` 改用客户端的 `resolveNsuidsToAppIds`。默认常量、底层解析函数和重复地区清单不再从根入口公开。完整移除清单和替代方式见[迁移说明](README.md#migrating-from-the-previous-root-exports)，不要改成依赖内部文件路径。已有 vendor 副本需单独更新。
+
 ## 请求与错误
 
 Savanna 和 Redirector 都对网络错误、HTTP 429 / 5xx 默认额外重试 2 次。
