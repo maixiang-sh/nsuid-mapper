@@ -205,7 +205,6 @@ export const MAPPABLE_COUNTRY_LANGUAGES = {
 } as const satisfies Record<MappableCountry, CountryLanguageInfo>;
 
 const UNMAPPABLE = new Set<string>(UNMAPPABLE_COUNTRIES);
-const MAPPABLE = new Set<string>(MAPPABLE_COUNTRIES);
 const COUNTRY_LANGUAGES: Partial<Record<string, CountryLanguageInfo>> = MAPPABLE_COUNTRY_LANGUAGES;
 
 /**
@@ -217,11 +216,6 @@ const COUNTRY_LANGUAGES: Partial<Record<string, CountryLanguageInfo>> = MAPPABLE
  */
 export function isMappable(country: string): boolean {
   return !UNMAPPABLE.has(country.trim().toUpperCase());
-}
-
-/** Whether this country appeared in the 2026-07-23 sweep as resolvable. */
-export function isKnownMappable(country: string): boolean {
-  return MAPPABLE.has(country.trim().toUpperCase());
 }
 
 /** Configured language codes for one verified-mappable country. */

@@ -12,7 +12,6 @@ import {
   MAPPABLE_COUNTRY_LANGUAGES,
   MAPPABLE_COUNTRIES,
   UNMAPPABLE_COUNTRIES,
-  isKnownMappable,
 } from '../src/catalogs.ts';
 import {
   MAX_REGIONS_PER_MAP,
@@ -41,12 +40,11 @@ describe('country coverage', () => {
     // The list is a snapshot. Refusing a country Nintendo may have added since
     // would be a worse failure than letting the request find out.
     expect(isMappable('ZZ')).toBe(true);
-    expect(isKnownMappable('ZZ')).toBe(false);
   });
 
   test('lookups are case- and whitespace-insensitive', () => {
     expect(isMappable(' kr ')).toBe(false);
-    expect(isKnownMappable('gb')).toBe(true);
+    expect(isMappable(' gb ')).toBe(true);
   });
 
   test('every mappable country has valid language metadata', () => {

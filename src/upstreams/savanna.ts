@@ -142,9 +142,8 @@ export async function fetchAppIds(
   return out;
 }
 
-/** Kinds this package can anchor to a cross-region id. */
-export type MappableKind = 'title' | 'dlc' | 'bundle';
-export type IdentityKind = MappableKind | 'demo' | 'consumable' | 'unknown';
+/** Identity kinds, including products without a supported cross-region mapping. */
+export type IdentityKind = 'title' | 'dlc' | 'bundle' | 'demo' | 'consumable' | 'unknown';
 
 export interface Identity {
   nsuid: string;
