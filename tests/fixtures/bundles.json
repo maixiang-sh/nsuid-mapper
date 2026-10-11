@@ -1,0 +1,2128 @@
+{
+  "verifiedOn": "2026-10-11",
+  "note": "Real Savanna identity selections. No localized fields, prices or complete raw responses.",
+  "items": [
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039410,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100f43008c45002"
+        },
+        {
+          "titleId": "0100f43008c44000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "HAC",
+            "applications": [
+              {
+                "id": "0100f43008c44000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100f43008c44000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039411,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0100f43008c45002"
+        },
+        {
+          "titleId": "0100f43008c44000"
+        },
+        {
+          "titleId": "0100f43008c45001"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0100f43008c44000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100f43008c44000"
+              },
+              {
+                "titleId": "0100f43008c45001"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028930,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100bee017fc1004"
+        },
+        {
+          "titleId": "0100bee017fc100d"
+        },
+        {
+          "titleId": "0100bee017fc1002"
+        },
+        {
+          "titleId": "0100bee017fc0000"
+        },
+        {
+          "titleId": "0100bee017fc13ea"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "HAC",
+            "applications": [
+              {
+                "id": "0100bee017fc0000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100bee017fc0000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc100d"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc13ea"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1004"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1002"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028931,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100bee017fc1004"
+        },
+        {
+          "titleId": "0100bee017fc100d"
+        },
+        {
+          "titleId": "0100bee017fc1003"
+        },
+        {
+          "titleId": "0100bee017fc0000"
+        },
+        {
+          "titleId": "0100bee017fc13ea"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "HAC",
+            "applications": [
+              {
+                "id": "0100bee017fc0000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100bee017fc0000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc100d"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc13ea"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1004"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1003"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000033882,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26FUTBIRTHDAYE",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000013653,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100b0401174308e"
+        },
+        {
+          "titleId": "0100b0401174308f"
+        },
+        {
+          "titleId": "0100b04011743089"
+        },
+        {
+          "titleId": "0100b04011743090"
+        },
+        {
+          "titleId": "0100b0401174308a"
+        },
+        {
+          "titleId": "0100b0401174308b"
+        },
+        {
+          "titleId": "0100b0401174308c"
+        },
+        {
+          "titleId": "0100b0401174308d"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100b04011743089"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100b0401174308e"
+              },
+              {
+                "titleId": "0100b0401174308f"
+              },
+              {
+                "titleId": "0100b04011743090"
+              },
+              {
+                "titleId": "0100b0401174308a"
+              },
+              {
+                "titleId": "0100b0401174308b"
+              },
+              {
+                "titleId": "0100b0401174308c"
+              },
+              {
+                "titleId": "0100b0401174308d"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039562,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100f43008c45002"
+        },
+        {
+          "titleId": "0100f43008c44000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "HAC",
+            "applications": [
+              {
+                "id": "0100f43008c44000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100f43008c44000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039564,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0100f43008c45002"
+        },
+        {
+          "titleId": "0100f43008c44000"
+        },
+        {
+          "titleId": "0100f43008c45001"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0100f43008c44000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100f43008c44000"
+              },
+              {
+                "titleId": "0100f43008c45001"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100f43008c45002"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028985,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100bee017fc1004"
+        },
+        {
+          "titleId": "0100bee017fc100d"
+        },
+        {
+          "titleId": "0100bee017fc1002"
+        },
+        {
+          "titleId": "0100bee017fc0000"
+        },
+        {
+          "titleId": "0100bee017fc13ea"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "HAC",
+            "applications": [
+              {
+                "id": "0100bee017fc0000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100bee017fc0000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc100d"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc13ea"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1002"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1004"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028984,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100bee017fc1004"
+        },
+        {
+          "titleId": "0100bee017fc100d"
+        },
+        {
+          "titleId": "0100bee017fc1003"
+        },
+        {
+          "titleId": "0100bee017fc0000"
+        },
+        {
+          "titleId": "0100bee017fc13ea"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "HAC",
+            "applications": [
+              {
+                "id": "0100bee017fc0000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0100bee017fc0000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc100d"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc13ea"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1003"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100bee017fc1004"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000013654,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100b0401174308e"
+        },
+        {
+          "titleId": "0100b0401174308f"
+        },
+        {
+          "titleId": "0100b04011743089"
+        },
+        {
+          "titleId": "0100b04011743090"
+        },
+        {
+          "titleId": "0100b0401174308a"
+        },
+        {
+          "titleId": "0100b0401174308b"
+        },
+        {
+          "titleId": "0100b0401174308c"
+        },
+        {
+          "titleId": "0100b0401174308d"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100b04011743089"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "DlcItem",
+            "labelPlatform": "HAC",
+            "romRights": [
+              {
+                "titleId": "0100b0401174308e"
+              },
+              {
+                "titleId": "0100b0401174308f"
+              },
+              {
+                "titleId": "0100b04011743090"
+              },
+              {
+                "titleId": "0100b0401174308a"
+              },
+              {
+                "titleId": "0100b0401174308b"
+              },
+              {
+                "titleId": "0100b0401174308c"
+              },
+              {
+                "titleId": "0100b0401174308d"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039083,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMPREMIUMCARPAC",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039082,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMCHASESQUAD000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRCCARS0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMNIIHAU0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039081,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000040663,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000040662,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMPREMIUMCARPAC",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000040661,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMCHASESQUAD000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRCCARS0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMNIIHAU0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000040657,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000040656,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMPREMIUMCARPAC",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000040654,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMCHASESQUAD000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRCCARS0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMNIIHAU0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039034,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMPREMIUMCARPAC",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039033,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRCCARS0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMNIIHAU0000000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMCHASESQUAD000",
+            "consumableItemGroup": {
+              "id": "TCMEXPERIENCES00",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000039032,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400bb40240ec000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400bb40240ec000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400bb40240ec000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMRAINBPACK0000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "TCMJUNGPACK00000",
+            "consumableItemGroup": {
+              "id": "TCMCARPACK000000",
+              "publisher": {
+                "id": 278
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000035280,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26WORLDCUPED",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000032413,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26HOLIDAYULTIM",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028794,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26ULTIMATEINC",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028790,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26STDPREORDLOY",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028787,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26ULTPRELOYINC",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028785,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26ULTEARPRELOY",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028784,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26ULTPREORDINC",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000028780,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26ULTEARPREINC",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000035281,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26WORLDCUPED",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000033921,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400c460219b2000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400c460219b2000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400c460219b2000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "FC26FUTBIRTHDAYE",
+            "consumableItemGroup": {
+              "id": "FC26EditionIncen",
+              "publisher": {
+                "id": 69
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000030933,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400da10226be000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400da10226be000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400da10226be000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "2K26DIGITAL79",
+            "consumableItemGroup": {
+              "id": "xezvkddoob3tagbz",
+              "publisher": {
+                "id": 502
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000031388,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400da10226be000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400da10226be000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400da10226be000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "2K26DIGITAL79",
+            "consumableItemGroup": {
+              "id": "fuxyt7cqgg33gqq2",
+              "publisher": {
+                "id": 502
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000031384,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400da10226be000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400da10226be000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400da10226be000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "2K26DIGITAL79",
+            "consumableItemGroup": {
+              "id": "mn8inradigc4vz7w",
+              "publisher": {
+                "id": 502
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "__typename": "BundleItem",
+      "nsUid": 70070000031382,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400da10226be000"
+        }
+      ],
+      "itemsV2": [
+        {
+          "item": {
+            "__typename": "ApplicationItem",
+            "labelPlatform": "BEE",
+            "applications": [
+              {
+                "id": "0400da10226be000"
+              }
+            ],
+            "romRights": [
+              {
+                "titleId": "0400da10226be000"
+              }
+            ]
+          }
+        },
+        {
+          "item": {
+            "__typename": "ConsumableItemV2",
+            "itemId": "2K26DIGITAL79",
+            "consumableItemGroup": {
+              "id": "ywnbkymrn2mddx2i",
+              "publisher": {
+                "id": 502
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "verifiedOn": "2026-10-11",
+  "note": "Minimal real Nintendo DLC identity selections. Tests mark synthetic mutations.",
+  "items": [
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000023111,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100b04011743022"
+        },
+        {
+          "titleId": "0100b04011743024"
+        },
+        {
+          "titleId": "0100b0401174300c"
+        },
+        {
+          "titleId": "0100b04011743014"
+        },
+        {
+          "titleId": "0100b0401174301e"
+        },
+        {
+          "titleId": "0100b0401174301f"
+        },
+        {
+          "titleId": "0100b04011743017"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000032598,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100b0401174308e"
+        },
+        {
+          "titleId": "0100b0401174308f"
+        },
+        {
+          "titleId": "0100b04011743090"
+        },
+        {
+          "titleId": "0100b0401174308a"
+        },
+        {
+          "titleId": "0100b0401174308b"
+        },
+        {
+          "titleId": "0100b0401174308c"
+        },
+        {
+          "titleId": "0100b0401174308d"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000077805,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0100839022643001"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000023117,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100b04011743022"
+        },
+        {
+          "titleId": "0100b04011743024"
+        },
+        {
+          "titleId": "0100b0401174300c"
+        },
+        {
+          "titleId": "0100b04011743014"
+        },
+        {
+          "titleId": "0100b0401174301e"
+        },
+        {
+          "titleId": "0100b0401174301f"
+        },
+        {
+          "titleId": "0100b04011743017"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000032599,
+      "labelPlatform": "HAC",
+      "romRights": [
+        {
+          "titleId": "0100b0401174308e"
+        },
+        {
+          "titleId": "0100b0401174308f"
+        },
+        {
+          "titleId": "0100b04011743090"
+        },
+        {
+          "titleId": "0100b0401174308a"
+        },
+        {
+          "titleId": "0100b0401174308b"
+        },
+        {
+          "titleId": "0100b0401174308c"
+        },
+        {
+          "titleId": "0100b0401174308d"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000078275,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0100839022643001"
+        }
+      ]
+    }
+  ]
+}

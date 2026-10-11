@@ -1,0 +1,65 @@
+{
+  "name": "@nintendo-store/nsuid-mapper",
+  "version": "0.1.0",
+  "packageManager": "bun@1.3.11",
+  "private": true,
+  "description": "Map a Nintendo eShop nsuid to the same product's nsuid in other regions.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "bun": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "docs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17",
+    "bun": ">=1.1.0"
+  },
+  "scripts": {
+    "build": "bun run scripts/clean-dist.ts && bun --bun run tsc -p tsconfig.build.json",
+    "test": "bun test tests/",
+    "test:live": "LIVE=1 bun test tests/live.test.ts tests/live.regressions.test.ts",
+    "typecheck": "bun --bun run tsc --noEmit",
+    "lint": "bun --bun run oxlint",
+    "lint:fix": "bun --bun run oxlint --fix",
+    "format": "bun --bun run prettier --ignore-path .prettierignore --write \"**/*.{ts,json,md}\"",
+    "format:check": "bun --bun run prettier --ignore-path .prettierignore --check \"**/*.{ts,json,md}\"",
+    "check": "bun run build && bun run typecheck && bun run lint && bun run format:check && bun run test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "@types/node": "^18.19.0",
+    "oxlint": "^1.74.0",
+    "prettier": "^3.6.2",
+    "typescript": "7.0.2"
+  },
+  "keywords": [
+    "nintendo",
+    "eshop",
+    "nsuid",
+    "cross-region",
+    "switch"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maixiang-sh/nsuid-mapper.git"
+  },
+  "homepage": "https://github.com/maixiang-sh/nsuid-mapper#readme",
+  "bugs": {
+    "url": "https://github.com/maixiang-sh/nsuid-mapper/issues"
+  }
+}
