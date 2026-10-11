@@ -13,6 +13,7 @@
 
 import { NsuidMapError } from '../errors.ts';
 import { backoffDelay, normalizeRetries, waitForRetry } from '../retry.ts';
+import { normalizeTimeoutMs } from '../timeout.ts';
 import type { RequestOptions } from '../types.ts';
 
 export const SAVANNA_ENDPOINT = 'https://wb.lp1.savanna.srv.nintendo.net/graphql';
@@ -43,8 +44,6 @@ const HEADERS: Record<string, string> = {
  * — there is no default, and upstream 400s without it.
  */
 export const SHOP_ID = 3;
-
-const DEFAULT_TIMEOUT_MS = 10_000;
 
 /** Shared selection: retain non-searchable contents and every member's SKU evidence. */
 const BUNDLE_IDENTITY_FIELDS = `
@@ -359,7 +358,7 @@ export async function execute<T>(
   },
 ): Promise<T> {
   const endpoint = options?.endpoint ?? SAVANNA_ENDPOINT;
-  const timeoutMs = normalizePositiveInt(options?.timeoutMs, DEFAULT_TIMEOUT_MS, 120_000);
+  const timeoutMs = normalizeTimeoutMs(options?.timeoutMs);
   const retries = normalizeRetries(options?.retries);
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const signal = options?.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
@@ -408,6 +407,10 @@ async function executeAttempt<T>(
 ): Promise<T> {
   const fetchFn = options?.fetch ?? globalThis.fetch;
 
+  if (signal.aborted) {
+    throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, signal.reason);
+  }
+
   let res: Response;
   try {
     res = await fetchFn(endpoint, {
@@ -424,6 +427,12 @@ async function executeAttempt<T>(
       `Savanna request failed: ${cause instanceof Error ? cause.message : String(cause)}`,
       { url: endpoint, cause, retryable: true, kind: 'network' },
     );
+  }
+
+  if (signal.aborted) {
+    // A buffered response may remain readable after cancellation; release it before failing.
+    void res.body?.cancel().catch(() => {});
+    throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, signal.reason);
   }
 
   let text: string;
@@ -443,6 +452,11 @@ async function executeAttempt<T>(
         kind: 'network',
       },
     );
+  }
+
+  // Successful body reads also need this check: buffered data need not reject on abort.
+  if (signal.aborted) {
+    throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, signal.reason);
   }
 
   // A transient HTTP failure remains retryable regardless of its JSON envelope.
@@ -537,12 +551,6 @@ function classifyAbort(
     cause,
     kind: 'abort',
   });
-}
-
-function normalizePositiveInt(value: number | undefined, fallback: number, max: number): number {
-  if (value == null) return fallback;
-  if (!Number.isFinite(value) || value <= 0) throw new TypeError('timeoutMs must be positive');
-  return Math.min(Math.trunc(value), max);
 }
 
 function mergeHeaders(...sources: Array<Record<string, string> | undefined>): Headers {

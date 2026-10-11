@@ -406,6 +406,18 @@ for (const [id, from, appId, expected] of [
     '01006c001c3da000',
     { JP: '70010000070063', US: null, GB: null, AU: null },
   ],
+  [
+    '70010000138987',
+    'US',
+    '01009a401bdea000',
+    { JP: null, GB: '70010000138988', AU: '70010000138988', HK: null },
+  ],
+  [
+    '70010000139338',
+    'HK',
+    '01006c001c3da000',
+    { JP: '70010000139337', US: null, GB: null, AU: null },
+  ],
 ] as const) {
   live(
     `Astral Ascent: regional identity ${id} is not merged with the other build`,
@@ -415,6 +427,9 @@ for (const [id, from, appId, expected] of [
         to: Object.keys(expected),
       });
       expect(r.source.appId).toBe(appId);
+      if (id === '70010000138987' || id === '70010000139338') {
+        expect(r.source.labelPlatform).toBe('BEE');
+      }
       expect(Object.fromEntries(r.targets.map((t) => [t.region, t.nsuid ?? null]))).toEqual(
         expected,
       );
@@ -498,6 +513,7 @@ for (const [id, from, kind, reason] of [
   ['70030000025288', 'AU', 'unknown', 'source NSUID was not returned'],
   ['70090000040108', 'AU', 'consumable', 'no application id for consumables'],
   ['70090000040109', 'AU', 'consumable', 'no application id for consumables'],
+  ['70090000040457', 'AU', 'consumable', 'no application id for consumables'],
 ] as const) {
   live(
     `unsupported or missing source makes no target requests: ${id} ${from}`,

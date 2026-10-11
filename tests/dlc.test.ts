@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { NsuidMapper } from '../src/client.ts';
+import { mapInto } from '../src/mapping.ts';
 import snapshot from './fixtures/dlcs.json' with { type: 'json' };
 
 function sample(id: number) {
@@ -130,4 +131,50 @@ test('DLC: an early empty page cannot establish uniqueness of a real matching SK
   }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.reason).toContain('empty page before declared total');
+});
+
+test('DLC: an unresolved parent does not prevent a complete-right match from another parent', async () => {
+  // Synthetic multi-parent identity, used only to document candidate discovery policy.
+  const rights = ['0100000000001001', '0200000000001001'];
+  const resolved: string[] = [];
+  const r = await mapInto(
+    {
+      nsuid: '70050099999001',
+      kind: 'dlc',
+      appId: rights[0],
+      labelPlatform: 'HAC',
+      titleIds: rights,
+    },
+    'GB',
+    {
+      resolve: async (appId) => {
+        resolved.push(appId);
+        return appId === '0100000000000000' ? undefined : '70010099999001';
+      },
+    },
+    {
+      fetch: (async () =>
+        Response.json({
+          data: {
+            item: {
+              applicationItem: {
+                dlcItems: {
+                  items: [
+                    {
+                      __typename: 'DlcItem',
+                      nsUid: 70050099999002,
+                      labelPlatform: 'HAC',
+                      romRights: rights.map((titleId) => ({ titleId })),
+                    },
+                  ],
+                  offsetInfo: { total: 1 },
+                },
+              },
+            },
+          },
+        })) as unknown as typeof fetch,
+    },
+  );
+  expect(r.nsuid).toBe('70050099999002');
+  expect(resolved).toEqual(['0100000000000000', '0200000000000000']);
 });

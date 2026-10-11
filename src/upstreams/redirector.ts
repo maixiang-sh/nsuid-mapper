@@ -2,12 +2,12 @@ import {
   APPS_PATH,
   DEFAULT_ENUMERATE_MAX,
   DEFAULT_HEADERS,
-  DEFAULT_TIMEOUT_MS,
   EC_BASE,
   MAX_ENUMERATE_LIMIT,
 } from '../constants.ts';
 import { NsuidMapError } from '../errors.ts';
 import { backoffDelay, normalizeRetries, waitForRetry } from '../retry.ts';
+import { normalizeTimeoutMs } from '../timeout.ts';
 import {
   isCatalogId,
   itemKindFromNsuid,
@@ -84,7 +84,7 @@ export class AppIdRedirector {
     this.defaultEnumerateMax = parseEnumerateMax(
       options.defaultEnumerateMax ?? DEFAULT_ENUMERATE_MAX,
     );
-    this.timeoutMs = parseTimeoutMs(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    this.timeoutMs = normalizeTimeoutMs(options.timeoutMs);
     this.retries = normalizeRetries(options.retries);
   }
 
@@ -101,7 +101,7 @@ export class AppIdRedirector {
     const reg = normalizeRegion(region);
     const acdIndex = parseAcdIndex(options.acdIndex);
     const url = this.buildUrl(id, reg, acdIndex);
-    const timeoutMs = parseTimeoutMs(options.timeoutMs ?? this.timeoutMs);
+    const timeoutMs = normalizeTimeoutMs(options.timeoutMs ?? this.timeoutMs);
     const retries = normalizeRetries(options.retries ?? this.retries);
     const timeoutController = new AbortController();
     const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
@@ -120,6 +120,8 @@ export class AppIdRedirector {
           if (signal.aborted) throw signal.reason;
           const res = await fetchImpl(url, { method: 'GET', redirect: 'manual', signal, headers });
           try {
+            // Even buffered headers can be returned after the caller cancels.
+            if (signal.aborted) throw signal.reason;
             if (res.status === 404) return null;
             if (res.status >= 300 && res.status < 400) {
               const location = res.headers.get('location');
@@ -273,13 +275,6 @@ function classifyAbort(
       : `AppID resolve timed out after ${timeoutMs}ms: ${url}`,
     { url, cause, kind: abortedByCaller ? 'abort' : 'timeout' },
   );
-}
-
-function parseTimeoutMs(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) {
-    throw new TypeError('timeoutMs must be a positive finite number');
-  }
-  return value;
 }
 
 function parseEnumerateMax(value: number): number {

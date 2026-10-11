@@ -321,6 +321,25 @@ describe('bundle parent candidates', () => {
     expect(resolved).toEqual([BASE_A, BASE_B]);
   });
 
+  test('an unresolved parent anchor does not discard a full match from a resolved parent', async () => {
+    // Synthetic discovery response: the candidate still contains both full member identities.
+    const fingerprint = [BASE_A, BASE_B];
+    const resolved: string[] = [];
+    const result = await mapInto(
+      bundleIdentity(fingerprint),
+      'US',
+      {
+        resolve: async (appId) => {
+          resolved.push(appId);
+          return appId === BASE_A ? undefined : PARENT_B;
+        },
+      },
+      { fetch: bundleFetch(fingerprint, PARENT_B) },
+    );
+    expect(result.nsuid).toBe(BUNDLE_NSUID);
+    expect(resolved).toEqual([BASE_A, BASE_B]);
+  });
+
   test('reports valid but non-parent application ids accurately', async () => {
     let resolverCalls = 0;
     const result = await mapInto(

@@ -83,6 +83,12 @@ can contain the rights that distinguish three-month and twelve-month passes.
 Candidate discovery follows the parent's base/upgrade links and examines all
 reachable candidates before accepting exactly one match.
 
+An application anchor with no target redirect is skipped. Matches are unique
+within the candidates returned by successfully resolved parents, not a guarantee
+that the entire regional catalog was enumerated. Each candidate must still match
+the complete source identity; no member is removed from comparison. Network,
+schema and permission failures throw instead of being skipped.
+
 `source.contentAppIds` contains every member application and right ID, used to
 find parent applications. `source.contentKeys` contains the canonical member
 signatures used for comparison. These are derived metadata, not upstream fields.
@@ -280,6 +286,12 @@ await mapper.resolveNsuidToAppId(nsuid, 'GB', {
 
 `timeoutMs` can override both Savanna and redirector requests per call. On either
 upstream, attempts share that request's timeout budget; retries never silently multiply it.
+Both accept only integer milliseconds from `1` to `120000`, defaulting to `10000`.
+Fractional, non-finite, non-positive and larger values throw `TypeError` before
+any request; they are not silently rounded or capped.
+Cancellation is checked before fetching and after a response arrives; Savanna
+also checks after reading the body. A buffered response cannot turn an already
+cancelled or timed-out request into a successful result.
 A map can make multiple requests, so this is not a whole-map deadline. Pass an
 `AbortSignal` when the complete mapping operation needs one.
 
@@ -301,7 +313,7 @@ await mapper.mapNsuid('70070000040805', {
 | No DLC / bundle candidates  | The resolved parents' queries returned no candidates. This does not establish that the target region never sold the product.       |
 | No SKU matches              | Candidates were returned, but none had matching identity evidence.                                                                 |
 | Ambiguous SKU               | Multiple candidates match the available fields; none is selected.                                                                  |
-| Scan incomplete             | Pagination or parent discovery did not finish; no partial match is accepted.                                                       |
+| Scan incomplete             | A pagination/parent cap or early empty page left a scan unfinished; no partial match is accepted.                                  |
 
 `reason` is explanatory text and may change; use the presence of `nsuid` to
 detect a successful mapping. HTTP, schema and cancellation errors still reject
@@ -431,3 +443,9 @@ Grand Garage versus Deluxe, and free trials represented as `ApplicationItem`.
 Star Fox Demo `70030000025288` is a US sample; the same ID is currently omitted
 in AU. Missing and unsupported sources are checked to make no target requests.
 An empty JP candidate result is a dated observation, not a permanent availability claim.
+Astral Ascent covers both HAC and BEE builds; AU V-Bucks covers the 800, 2,400
+and 12,500 packs. Deterministic buffered-response tests cover aborts and timeouts
+on both transports independently of runtime buffering behavior.
+
+Development uses Bun `1.4.3` (pinned in `packageManager`) and TypeScript `7.0.2`.
+These are the stable versions verified on 2026-10-11; canary/nightly builds are not used.

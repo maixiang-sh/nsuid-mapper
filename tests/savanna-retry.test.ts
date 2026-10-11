@@ -236,3 +236,68 @@ for (const body of [
     expect(calls).toBe(1);
   });
 }
+
+for (const stage of ['before-fetch', 'buffered-response', 'successful-body-read'] as const) {
+  test(`caller abort at ${stage} prevents a successful Savanna result without retrying`, async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    let released = 0;
+    if (stage === 'before-fetch') controller.abort();
+    const error = await execute(
+      query,
+      {},
+      {
+        signal: controller.signal,
+        retries: 2,
+        fetch: (async () => {
+          calls++;
+          if (stage === 'buffered-response') {
+            controller.abort();
+            return new Response(
+              new ReadableStream({
+                cancel() {
+                  released++;
+                },
+              }),
+            );
+          }
+          const response = Response.json({ data: { ok: true } });
+          const text = response.text.bind(response);
+          response.text = async () => {
+            const body = await text();
+            controller.abort();
+            return body;
+          };
+          return response;
+        }) as unknown as typeof fetch,
+      },
+    ).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(NsuidMapError);
+    expect((error as NsuidMapError).kind).toBe('abort');
+    expect((error as NsuidMapError).retryable).toBeFalse();
+    expect(calls).toBe(stage === 'before-fetch' ? 0 : 1);
+    expect(released).toBe(stage === 'buffered-response' ? 1 : 0);
+  });
+}
+
+test('a buffered Savanna response returned after the deadline remains a timeout', async () => {
+  let calls = 0;
+  const error = await execute(
+    query,
+    {},
+    {
+      timeoutMs: 5,
+      retries: 2,
+      fetch: (async (_url, init) => {
+        calls++;
+        await new Promise<void>((resolve) => {
+          init!.signal!.addEventListener('abort', () => resolve(), { once: true });
+        });
+        return Response.json({ data: { ok: true } });
+      }) as typeof fetch,
+    },
+  ).catch((e: unknown) => e);
+  expect((error as NsuidMapError).kind).toBe('timeout');
+  expect((error as NsuidMapError).retryable).toBeFalse();
+  expect(calls).toBe(1);
+});

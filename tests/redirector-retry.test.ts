@@ -185,3 +185,53 @@ test('one transient country failure recovers within the existing complete-result
   expect(getCalls.get('AU')).toBe(2);
   expect(getCalls.get('US')).toBe(1);
 });
+
+for (const status of [200, 307, 404]) {
+  test(`buffered redirector ${status} after caller abort is rejected and released`, async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    let released = 0;
+    const client = new NsuidMapper({
+      fetch: (async () => {
+        calls++;
+        controller.abort();
+        return new Response(
+          new ReadableStream({
+            cancel() {
+              released++;
+            },
+          }),
+          {
+            status,
+            headers: { location: `/AU/en/titles/${TARGET}` },
+          },
+        );
+      }) as unknown as typeof fetch,
+    });
+    const error = await client
+      .resolveAppId(APP, 'AU', { signal: controller.signal })
+      .catch((e: unknown) => e);
+    expect((error as NsuidMapError).kind).toBe('abort');
+    expect((error as NsuidMapError).retryable).toBeFalse();
+    expect(calls).toBe(1);
+    expect(released).toBe(1);
+  });
+}
+
+test('redirector headers returned after the deadline remain a timeout', async () => {
+  let calls = 0;
+  const client = new NsuidMapper({
+    timeoutMs: 5,
+    fetch: (async (_url, init) => {
+      calls++;
+      await new Promise<void>((resolve) => {
+        init!.signal!.addEventListener('abort', () => resolve(), { once: true });
+      });
+      return redirect();
+    }) as typeof fetch,
+  });
+  const error = await client.resolveAppId(APP, 'AU').catch((e: unknown) => e);
+  expect((error as NsuidMapError).kind).toBe('timeout');
+  expect((error as NsuidMapError).retryable).toBeFalse();
+  expect(calls).toBe(1);
+});

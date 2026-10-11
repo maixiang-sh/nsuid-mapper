@@ -41,7 +41,7 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Injectable for tests; defaults to the global. */
   fetch?: typeof globalThis.fetch;
-  /** Per-request timeout, including retries and backoff on either upstream. Default: 10 seconds. */
+  /** Per-request budget including retries/backoff. Integer milliseconds, 1–120000; default: 10000. */
   timeoutMs?: number;
   /** Extra attempts after the first on either upstream. Default: 2; maximum: 5. */
   retries?: number;
