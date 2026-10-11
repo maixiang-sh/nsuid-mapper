@@ -35,6 +35,11 @@ identity. Nothing is matched by name.
 | `7005` dlc    | platform and full right set                 | parent's DLC/upgrade list, unique SKU match |
 | `7007` bundle | platform, full rights and member signatures | all linked parents, unique identity match   |
 
+Application IDs can differ between regional builds of the same game. For example,
+Monster Hunter Rise uses `0100559011740000` in JP/HK and `0100b04011742000`
+in US/GB/AU. This mapper has no verified cross-build link between them and does
+not join them by name. A missing redirect is not proof that a country does not sell the game.
+
 Bundles carry no appId of their own. A single member's first appId or right is
 insufficient: base and Switch 2 editions can share appIds, and passes can differ
 only in additional rights or subscription durations.
@@ -47,6 +52,13 @@ not used to choose a target. Candidates from `dlcItems` and
 `upgradeInfo.upgradeDlcItem` are deduplicated by nsuid, and exactly one complete
 match is required. Different platforms, additional rights, ambiguous matches,
 or an incomplete candidate scan return a reason rather than a partial match.
+
+Rights are not universally unique product IDs. JP DLC `70050000072882` and its
+three sibling DLC products share `BEE` and `0400a3a01ee4d001`; the four target
+products in US, GB, AU and HK also share that identity. These mappings return
+`Ambiguous DLC SKU` because the selected identity fields cannot distinguish them.
+The public client rejects `DlcItem.itemId`; the consumable identity field cannot
+simply be reused for DLC.
 
 `resolveNsuidsToAppIds` still returns one representative ID per title/DLC for
 compatibility. It is an ID lookup, not a complete cross-region SKU comparison.
@@ -271,6 +283,30 @@ upstream, attempts share that request's timeout budget; retries never silently m
 A map can make multiple requests, so this is not a whole-map deadline. Pass an
 `AbortSignal` when the complete mapping operation needs one.
 
+```ts
+await mapper.mapNsuid('70070000040805', {
+  from: 'HK',
+  to: ['JP', 'US', 'GB', 'AU'],
+  signal: AbortSignal.timeout(30_000),
+});
+```
+
+### Reading an unmapped result
+
+| Reason                      | What was observed                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Source NSUID not returned   | The source catalog omitted the product; it may be unavailable there or belong to another region.                                   |
+| Application ID not resolved | The target redirector found no product for that ID; an unavailable product and a different regional AppID cannot be distinguished. |
+| No title identity returned  | A redirect resolved an NSUID, but the target identity query returned no title.                                                     |
+| No DLC / bundle candidates  | The resolved parents' queries returned no candidates. This does not establish that the target region never sold the product.       |
+| No SKU matches              | Candidates were returned, but none had matching identity evidence.                                                                 |
+| Ambiguous SKU               | Multiple candidates match the available fields; none is selected.                                                                  |
+| Scan incomplete             | Pagination or parent discovery did not finish; no partial match is accepted.                                                       |
+
+`reason` is explanatory text and may change; use the presence of `nsuid` to
+detect a successful mapping. HTTP, schema and cancellation errors still reject
+the operation with `NsuidMapError` rather than producing a business reason.
+
 ## Resolving ids
 
 Both directions, and both batched.
@@ -374,7 +410,7 @@ Upgrade DLC is searched through `upgradeInfo.upgradeDlcItem` as well as `dlcItem
 using the platform and full DLC right set to verify the match. Request cancellation and timeout
 remain non-retryable even when they occur while reading the response body.
 
-### Bundle regression fixtures
+### Regression fixtures
 
 `tests/fixtures/bundles.json` and `tests/fixtures/dlcs.json` store only the minimal mapping fields from real
 Nintendo responses verified on 2026-10-11. Offline tests cover edition mix-ups,
@@ -387,3 +423,11 @@ exhaustion, cancellation during backoff, source preflight and per-call timeout o
 both correct mappings and explicit refusal when current upstream evidence is
 insufficient. Live assertions are dated observations; future catalog changes
 can require updating them after verification.
+
+Shared-right DLC has a minimal real offline fixture and live ambiguity checks.
+Other live cases cover Anime Codex's current empty JP candidate discovery,
+the separate Rise / Astral Ascent AppID groups, GB/AU reverse Crew mapping,
+Grand Garage versus Deluxe, and free trials represented as `ApplicationItem`.
+Star Fox Demo `70030000025288` is a US sample; the same ID is currently omitted
+in AU. Missing and unsupported sources are checked to make no target requests.
+An empty JP candidate result is a dated observation, not a permanent availability claim.

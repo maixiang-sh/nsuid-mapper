@@ -27,7 +27,7 @@ test('valid ticket types are unsupported, distinct from an omitted catalog produ
       `Unsupported item type: ${node.__typename}`,
     );
   }
-  expect(result.get(missing)?.reason).toContain('could not be resolved');
+  expect(result.get(missing)?.reason).toContain('source NSUID was not returned');
 });
 
 test('bundle paging counts DLC entries without fetching their identities, including the last page', async () => {

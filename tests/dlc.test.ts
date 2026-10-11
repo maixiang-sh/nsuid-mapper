@@ -11,7 +11,13 @@ type Dlc = ReturnType<typeof sample>;
 function setup(
   source: Dlc,
   targets: Dlc[],
-  options: { duplicateUpgrade?: boolean; truncate?: boolean; earlyEmpty?: boolean } = {},
+  options: {
+    duplicateUpgrade?: boolean;
+    truncate?: boolean;
+    earlyEmpty?: boolean;
+    from?: string;
+    parent?: string;
+  } = {},
 ) {
   let redirects = 0;
   const client = new NsuidMapper({
@@ -20,7 +26,7 @@ function setup(
         redirects++;
         return new Response(null, {
           status: 307,
-          headers: { location: '/GB/en/titles/70010000029014' },
+          headers: { location: `/GB/en/titles/${options.parent ?? '70010000029014'}` },
         });
       }
       const body = JSON.parse(String(init.body)) as {
@@ -47,7 +53,7 @@ function setup(
     }) as typeof fetch,
   });
   return {
-    map: () => client.mapNsuid(source.nsUid, { from: 'US', to: ['GB'] }),
+    map: () => client.mapNsuid(source.nsUid, { from: options.from ?? 'US', to: ['GB'] }),
     redirects: () => redirects,
   };
 }
@@ -77,6 +83,25 @@ test('DLC: two matching SKUs remain ambiguous', async () => {
   const r = await setup(sample(70050000023111), [a, b]).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.reason).toContain('Ambiguous');
+});
+test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1', async () => {
+  // Actual 2026-10-11 selections; no synthetic duplicate candidate or modified rights.
+  const targets = [70050000073726, 70050000073728, 70050000073729, 70050000073730].map(sample);
+  const r = await setup(sample(70050000072882), targets, {
+    from: 'JP',
+    parent: '70010000107422',
+  }).map();
+  expect(r.source.titleIds).toEqual(['0400a3a01ee4d001']);
+  expect(r.targets[0]?.nsuid).toBeUndefined();
+  expect(r.targets[0]?.reason).toContain('Ambiguous DLC SKU');
+  expect(r.targets[0]?.reason).toContain('cannot distinguish');
+});
+test('DLC: empty parent candidates have a distinct reason from identity mismatch', async () => {
+  const source = sample(70050000023111);
+  expect((await setup(source, []).map()).targets[0]?.reason).toContain('No DLC candidates');
+  expect((await setup(source, [sample(70050000078275)]).map()).targets[0]?.reason).toContain(
+    'No DLC SKU matches',
+  );
 });
 test('DLC: the same SKU in both upgradeInfo and dlcItems is not ambiguity', async () => {
   const r = await setup(sample(70050000077805), [sample(70050000078275)], {

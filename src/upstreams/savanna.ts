@@ -209,7 +209,8 @@ export async function fetchIdentities(
       out.set(nsuid, {
         nsuid,
         kind: 'unknown',
-        reason: 'The corresponding NSUID could not be resolved for this region.',
+        reason:
+          "The source NSUID was not returned by this region's catalog; it may be unavailable here or belong to another region",
       });
     }
   }

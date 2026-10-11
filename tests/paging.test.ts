@@ -114,7 +114,9 @@ describe('related-item paging', () => {
     });
 
     expect(r.targets[0]!.nsuid).toBeUndefined();
-    expect(r.targets[0]!.reason).toContain('no item with a matching application id');
+    expect(r.targets[0]!.reason).toContain(
+      'No DLC SKU matches the source platform and complete ROM rights',
+    );
   });
 
   test('an empty page ends the walk even when total claims there is more', async () => {

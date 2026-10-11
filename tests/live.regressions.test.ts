@@ -320,3 +320,210 @@ for (const [id, from, to, expected] of multiRightDlcs) {
     120_000,
   );
 }
+
+// Source/target pairs checked against live names and structured identities on 2026-10-11.
+// The names document the samples; mapping and assertions use no localized text.
+live(
+  'shared-right DLC: JP Part 1 stays ambiguous in all four target regions',
+  async () => {
+    const related = await fetchRelatedItems('70010000107422', 'GB', 'en', false, {
+      timeoutMs: 15_000,
+    });
+    expect(related.truncated).toBeFalse();
+    expect(related.dlcs.map((d) => d.nsuid).sort()).toEqual([
+      '70050000073726',
+      '70050000073728',
+      '70050000073729',
+      '70050000073730',
+    ]);
+    for (const dlc of related.dlcs) {
+      expect(dlc.labelPlatform).toBe('BEE');
+      expect(dlc.titleIds).toEqual(['0400a3a01ee4d001']);
+    }
+    const r = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid('70050000072882', {
+      from: 'JP',
+      to: ['US', 'GB', 'AU', 'HK'],
+    });
+    for (const target of r.targets) {
+      expect(target.nsuid).toBeUndefined();
+      expect(target.reason).toContain('Ambiguous DLC SKU');
+      expect(target.reason).toContain('cannot distinguish');
+    }
+  },
+  120_000,
+);
+
+live(
+  'Anime Codex: maps western bundles and reports no returned JP candidates',
+  async () => {
+    const r = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid('70070000040805', {
+      from: 'HK',
+      to: ['JP', 'US', 'GB', 'AU'],
+    });
+    expect(r.source.contentKeys).toHaveLength(4);
+    expect(r.targets.map((t) => t.nsuid)).toEqual([
+      undefined,
+      '70070000040913',
+      '70070000040623',
+      '70070000040623',
+    ]);
+    // This records current candidate discovery, not a claim that JP never sold it.
+    expect(r.targets[0]?.reason).toContain('No bundle candidates');
+  },
+  120_000,
+);
+
+live(
+  'Rise: JP/HK and western application IDs differ despite the game being sold in both',
+  async () => {
+    const client = new NsuidMapper({ timeoutMs: 15_000 });
+    const r = await client.mapNsuid('70010000029014', {
+      from: 'JP',
+      to: ['HK', 'US', 'GB', 'AU'],
+    });
+    expect(r.source.appId).toBe('0100559011740000');
+    expect(r.targets[0]?.nsuid).toBe('70010000029013');
+    for (const target of r.targets.slice(1)) {
+      expect(target.nsuid).toBeUndefined();
+      expect(target.reason).toContain('different regional application ID');
+    }
+    expect(await client.resolveNsuidToAppId('70010000029015', 'GB')).toBe('0100b04011742000');
+    expect(await client.resolveNsuidToAppId('70010000029016', 'US')).toBe('0100b04011742000');
+  },
+  120_000,
+);
+
+for (const [id, from, appId, expected] of [
+  [
+    '70010000068938',
+    'US',
+    '01009a401bdea000',
+    { JP: null, GB: '70010000068939', AU: '70010000068939', HK: null },
+  ],
+  [
+    '70010000070062',
+    'HK',
+    '01006c001c3da000',
+    { JP: '70010000070063', US: null, GB: null, AU: null },
+  ],
+] as const) {
+  live(
+    `Astral Ascent: regional identity ${id} is not merged with the other build`,
+    async () => {
+      const r = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid(id, {
+        from,
+        to: Object.keys(expected),
+      });
+      expect(r.source.appId).toBe(appId);
+      expect(Object.fromEntries(r.targets.map((t) => [t.region, t.nsuid ?? null]))).toEqual(
+        expected,
+      );
+    },
+    120_000,
+  );
+}
+
+for (const [id, from, expected] of [
+  [
+    '70070000039032',
+    'GB',
+    { JP: '70070000040657', US: '70070000039081', AU: '70070000039032', HK: '70070000040663' },
+  ],
+  [
+    '70070000039032',
+    'AU',
+    { JP: '70070000040657', US: '70070000039081', GB: '70070000039032', HK: '70070000040663' },
+  ],
+  [
+    '70070000039034',
+    'GB',
+    { JP: '70070000040656', US: '70070000039083', AU: '70070000039034', HK: '70070000040662' },
+  ],
+  ['70010000045850', 'GB', { JP: null, US: '70010000045849', AU: '70010000045850', HK: null }],
+  [
+    '70010000129854',
+    'HK',
+    { JP: '70010000129853', US: '70010000129851', GB: '70010000129852', AU: '70010000129852' },
+  ],
+  [
+    '70010000100033',
+    'GB',
+    { JP: '70010000100034', US: '70010000100032', AU: '70010000100033', HK: '70010000100036' },
+  ],
+  [
+    '70010000096856',
+    'AU',
+    { JP: '70010000096732', US: '70010000096855', GB: '70010000096856', HK: null },
+  ],
+  [
+    '70010000089247',
+    'JP',
+    { US: '70010000089245', GB: '70010000089246', AU: '70010000089246', HK: '70010000089249' },
+  ],
+  [
+    '70010000098299',
+    'JP',
+    { US: '70010000098297', GB: '70010000098298', AU: '70010000098298', HK: '70010000098301' },
+  ],
+  [
+    '70050000036097',
+    'US',
+    { JP: '70050000039801', GB: '70050000036095', AU: '70050000036095', HK: null },
+  ],
+  [
+    '70050000071472',
+    'AU',
+    { JP: '70050000071473', US: '70050000071468', GB: '70050000071472', HK: null },
+  ],
+] as const) {
+  live(
+    `verified multi-region mapping: ${id} from ${from}`,
+    async () => {
+      const r = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid(id, {
+        from,
+        to: Object.keys(expected),
+      });
+      expect(Object.fromEntries(r.targets.map((t) => [t.region, t.nsuid ?? null]))).toEqual(
+        expected,
+      );
+      // A free trial with a 7001 NSUID is still an ApplicationItem, not a DemoItem.
+      if (id === '70010000089247' || id === '70010000098299') expect(r.source.kind).toBe('title');
+    },
+    120_000,
+  );
+}
+
+for (const [id, from, kind, reason] of [
+  ['70030000025288', 'US', 'demo', 'no application id for demos'],
+  ['70030000025288', 'AU', 'unknown', 'source NSUID was not returned'],
+  ['70090000040108', 'AU', 'consumable', 'no application id for consumables'],
+  ['70090000040109', 'AU', 'consumable', 'no application id for consumables'],
+] as const) {
+  live(
+    `unsupported or missing source makes no target requests: ${id} ${from}`,
+    async () => {
+      const countries = new Set<string>();
+      let redirects = 0;
+      const client = new NsuidMapper({
+        timeoutMs: 15_000,
+        fetch: (async (url, init) => {
+          if (init?.method === 'POST') {
+            const input = JSON.parse(String(init.body)) as { variables: { country: string } };
+            countries.add(input.variables.country);
+          } else redirects++;
+          return fetch(url, init);
+        }) as typeof fetch,
+      });
+      const r = await client.mapNsuid(id, { from, to: ['JP', 'GB', 'HK'] });
+      expect(r.source.kind).toBe(kind);
+      expect(r.source.reason).toContain(reason);
+      expect([...countries]).toEqual([from]);
+      expect(redirects).toBe(0);
+      for (const target of r.targets) {
+        expect(target.nsuid).toBeUndefined();
+        expect(target.reason).toBe(r.source.reason);
+      }
+    },
+    60_000,
+  );
+}

@@ -116,9 +116,16 @@ test('Z-A: discovers the Edition parent and never downgrades to the base bundle'
 });
 
 test('Z-A: an absent Edition cannot be replaced by a base bundle', async () => {
-  expect(
-    (await setup(sample(70070000039411), [sample(70070000039562)]).map()).targets[0]?.nsuid,
-  ).toBeUndefined();
+  const result = await setup(sample(70070000039411), [sample(70070000039562)]).map();
+  expect(result.targets[0]?.nsuid).toBeUndefined();
+  expect(result.targets[0]?.reason).toContain('No bundle SKU matches');
+});
+
+test('empty bundle candidates report a discovery limitation without declaring the product absent', async () => {
+  const result = await setup(sample(70070000039411), []).map();
+  expect(result.targets[0]?.nsuid).toBeUndefined();
+  expect(result.targets[0]?.reason).toContain('No bundle candidates');
+  expect(result.targets[0]?.reason).toContain('parent listings may omit');
 });
 
 test('multiple exact candidates on different linked parents remain ambiguous', async () => {

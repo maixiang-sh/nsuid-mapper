@@ -24,7 +24,9 @@ import { deriveBaseApplicationIdFromDlcAppId, normalizeRegion, parseAppId } from
 import type { RequestOptions } from './types.ts';
 import { fetchIdentities, fetchRelatedItems, type Identity } from './upstreams/savanna.ts';
 
-const UNRESOLVED_NSUID_REASON = 'The corresponding NSUID could not be resolved for this region.';
+// A missing redirect does not distinguish an unavailable game from a different regional build.
+const UNRESOLVED_NSUID_REASON =
+  'The application ID could not be resolved in the target region; the product may be unavailable or use a different regional application ID';
 
 /** Region → the `@inContext` pair its catalog answers in. */
 const REGION_CONTEXT: Record<string, { country: string; language: string }> = {
@@ -101,6 +103,12 @@ export async function mapInto(
       for (const [id, candidate] of await fetchIdentities(linked, country, language, options)) {
         candidates.set(id, candidate);
       }
+    }
+    if (![...candidates.values()].some((candidate) => candidate.kind === 'title')) {
+      return {
+        region: target,
+        reason: 'No title identity was returned for the resolved target NSUID',
+      };
     }
     const matches = [...candidates.values()].filter(
       (candidate) =>
@@ -190,6 +198,13 @@ async function mapBundle(
     for (const linked of related.upgradeNsuids) queue.add(linked);
     for (const candidate of related.bundles) candidates.set(candidate.nsuid, candidate);
   }
+  if (!candidates.size) {
+    return {
+      region,
+      reason:
+        'No bundle candidates were returned for the resolved parent titles; parent listings may omit unavailable or NOT_SALE items',
+    };
+  }
   const matches = [...candidates.values()].filter(
     (candidate) =>
       !candidate.reason &&
@@ -247,6 +262,12 @@ async function mapDlc(
     for (const candidate of related.dlcs) candidates.set(candidate.nsuid, candidate);
   }
   if (!visited.size) return { region, reason: UNRESOLVED_NSUID_REASON };
+  if (!candidates.size) {
+    return {
+      region,
+      reason: 'No DLC candidates were returned for the resolved parent titles',
+    };
+  }
   const matches = [...candidates.values()].filter(
     (candidate) =>
       candidate.labelPlatform === source.labelPlatform &&
@@ -257,8 +278,8 @@ async function mapDlc(
     region,
     reason:
       matches.length > 1
-        ? 'Ambiguous DLC SKU: multiple candidates match platform and rights'
-        : 'No DLC SKU matches platform and rights; parent carries no item with a matching application id set',
+        ? 'Ambiguous DLC SKU: multiple candidates match platform and rights; the available identity fields cannot distinguish them'
+        : 'No DLC SKU matches the source platform and complete ROM rights',
   };
 }
 

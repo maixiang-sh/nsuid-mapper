@@ -133,6 +133,56 @@
           "titleId": "0100839022643001"
         }
       ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000072882,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400a3a01ee4d001"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000073726,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400a3a01ee4d001"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000073728,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400a3a01ee4d001"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000073729,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400a3a01ee4d001"
+        }
+      ]
+    },
+    {
+      "__typename": "DlcItem",
+      "nsUid": 70050000073730,
+      "labelPlatform": "BEE",
+      "romRights": [
+        {
+          "titleId": "0400a3a01ee4d001"
+        }
+      ]
     }
   ]
 }

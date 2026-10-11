@@ -137,7 +137,7 @@ describe('what cannot be mapped', () => {
       const r = await client().mapNsuid('70010000095203', { from: 'JP', to: ['US'] });
       expect(r.source.kind).toBe('unknown');
       expect(r.source.reason).toBe(
-        'The corresponding NSUID could not be resolved for this region.',
+        "The source NSUID was not returned by this region's catalog; it may be unavailable here or belong to another region",
       );
       expect(r.targets[0]?.nsuid).toBeUndefined();
     },

@@ -238,6 +238,14 @@ group ID is excluded. A first ID or a plain application-ID set cannot distinguis
 all editions. See [the technical design](technical-design.zh-CN.md) for current
 query selections, limits and verified examples.
 
+Redirector misses cannot establish regional availability. Monster Hunter Rise
+uses `0100559011740000` in JP/HK, but `0100b04011742000` in US/GB/AU;
+the former returns no western target even though western SKUs exist. Mapping
+reports this unresolved application ID without inventing a link between builds.
+DLC rights can also be shared by distinct products: the four siblings around
+JP `70050000072882` all have `BEE` and `0400a3a01ee4d001`, so a unique
+target cannot be selected from those fields.
+
 ### 9.1 DLC content AppID → base Application ID
 
 The public Savanna `dlcItem` node does not expose a selectable parent edge:

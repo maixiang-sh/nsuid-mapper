@@ -125,6 +125,34 @@ for (const missing of ['platform', 'rights'] as const) {
     expect(r.reason).toContain('insufficient');
   });
 }
+test('an unresolved target appId is not reported as proof that the game is unavailable', async () => {
+  const r = await mapInto(
+    { nsuid: usBase, kind: 'title', appId, labelPlatform: 'HAC', titleIds: [appId] },
+    'GB',
+    { resolve: async () => undefined },
+    {
+      fetch: (() => {
+        throw new Error('No target NSUID to query');
+      }) as unknown as typeof fetch,
+    },
+  );
+  expect(r.nsuid).toBeUndefined();
+  expect(r.reason).toContain('application ID could not be resolved');
+  expect(r.reason).toContain('different regional application ID');
+});
+test('an omitted resolved target has a distinct reason from mismatching title identities', async () => {
+  const r = await mapInto(
+    { nsuid: usBase, kind: 'title', appId, labelPlatform: 'HAC', titleIds: [appId] },
+    'GB',
+    { resolve: async () => gbBase },
+    {
+      fetch: (async () =>
+        Response.json({ data: { item: { itemsV2: [] } } })) as unknown as typeof fetch,
+    },
+  );
+  expect(r.nsuid).toBeUndefined();
+  expect(r.reason).toContain('No title identity was returned');
+});
 test('finds upgrade DLC through upgradeInfo even when dlcItems is empty', async () => {
   const client = new NsuidMapper({
     fetch: (async (_url, init) => {
