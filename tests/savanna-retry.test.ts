@@ -38,6 +38,7 @@ test('Savanna respects Retry-After seconds and HTTP dates on transient errors', 
         query,
         {},
         {
+          timeoutMs: 120_000,
           sleep: async (delay) => {
             delays.push(delay);
           },
@@ -55,22 +56,27 @@ test('Savanna respects Retry-After seconds and HTTP dates on transient errors', 
   }
 });
 
-for (const hint of ['1', '9'.repeat(400)]) {
-  test(`Savanna Retry-After ${hint.length > 1 ? 'overflow' : 'seconds'} cannot exceed the request budget`, async () => {
+for (const hint of ['60', '9'.repeat(400)]) {
+  test(`Savanna Retry-After ${hint.length > 3 ? 'overflow' : 'seconds'} returns the HTTP error when waiting cannot fit`, async () => {
     let calls = 0;
     const error = await execute(
       query,
       {},
       {
-        timeoutMs: 10,
+        timeoutMs: 10_000,
+        sleep: async () => {
+          throw new Error('Must not wait beyond the request budget');
+        },
         fetch: (async () => {
           calls++;
           return new Response('{}', { status: 429, headers: { 'Retry-After': hint } });
         }) as unknown as typeof fetch,
       },
     ).catch((e: unknown) => e);
-    expect((error as NsuidMapError).kind).toBe('timeout');
-    expect((error as NsuidMapError).retryable).toBeFalse();
+    expect((error as NsuidMapError).kind).toBe('http');
+    expect((error as NsuidMapError).status).toBe(429);
+    expect((error as NsuidMapError).retryAfterMs).toBeGreaterThanOrEqual(60_000);
+    expect((error as NsuidMapError).retryable).toBeTrue();
     expect(calls).toBe(1);
   });
 }
@@ -86,7 +92,7 @@ test('caller cancellation ends Savanna server-directed retry waiting', async () 
       fetch: (async () => {
         calls++;
         setTimeout(() => controller.abort(), 10);
-        return new Response('{}', { status: 429, headers: { 'Retry-After': '3600' } });
+        return new Response('{}', { status: 429, headers: { 'Retry-After': '1' } });
       }) as unknown as typeof fetch,
     },
   ).catch((e: unknown) => e);

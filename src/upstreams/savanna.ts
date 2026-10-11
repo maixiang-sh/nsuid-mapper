@@ -14,8 +14,8 @@
 import { NsuidMapError } from '../errors.ts';
 import { USER_AGENT } from '../constants.ts';
 import { mergeHeaders } from '../headers.ts';
-import { normalizeRetries, parseRetryAfter, retryDelay, waitForRetry } from '../retry.ts';
-import { normalizeTimeoutMs } from '../timeout.ts';
+import { parseRetryAfter } from '../retry.ts';
+import { requestWithRetry } from '../request.ts';
 import type { RequestOptions } from '../types.ts';
 
 export const SAVANNA_ENDPOINT = 'https://wb.lp1.savanna.srv.nintendo.net/graphql';
@@ -359,88 +359,24 @@ export async function execute<T>(
   },
 ): Promise<T> {
   const endpoint = options?.endpoint ?? SAVANNA_ENDPOINT;
-  const timeoutMs = normalizeTimeoutMs(options?.timeoutMs);
-  const retries = normalizeRetries(options?.retries);
-  const timeoutSignal = AbortSignal.timeout(timeoutMs);
-  const signal = options?.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
-
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await executeAttempt<T>(
-        query,
-        variables,
-        endpoint,
-        options,
-        signal,
-        timeoutSignal,
-        timeoutMs,
-      );
-    } catch (error) {
-      lastError = error;
-      if (!(error instanceof NsuidMapError) || !error.retryable || attempt === retries) throw error;
-      if (signal.aborted)
-        throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, error);
-      try {
-        await waitForRetry(retryDelay(attempt, error.retryAfterMs), signal, options?.sleep);
-      } catch (sleepError) {
-        if (!signal.aborted) throw sleepError;
-        throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, sleepError);
-      }
-      if (signal.aborted)
-        throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, error);
-    }
-  }
-
-  throw lastError;
-}
-
-async function executeAttempt<T>(
-  query: string,
-  variables: object,
-  endpoint: string,
-  options: RequestOptions | undefined,
-  signal: AbortSignal,
-  timeoutSignal: AbortSignal,
-  timeoutMs: number,
-): Promise<T> {
-  const fetchFn = options?.fetch ?? globalThis.fetch;
-
-  if (signal.aborted) {
-    throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, signal.reason);
-  }
-
-  let res: Response;
-  try {
-    res = await fetchFn(endpoint, {
+  return requestWithRetry({
+    url: endpoint,
+    label: 'Savanna',
+    init: {
       method: 'POST',
       headers: mergeHeaders(HEADERS, options?.headers),
       body: JSON.stringify({ query, variables }),
-      signal,
-    });
-  } catch (cause) {
-    if (signal.aborted) {
-      throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, cause);
-    }
-    throw new NsuidMapError(
-      `Savanna request failed: ${cause instanceof Error ? cause.message : String(cause)}`,
-      { url: endpoint, cause, retryable: true, kind: 'network' },
-    );
-  }
+    },
+    options,
+    readResponse: (response) => readGraphqlResponse<T>(response, endpoint),
+  });
+}
 
-  if (signal.aborted) {
-    // A buffered response may remain readable after cancellation; release it before failing.
-    void res.body?.cancel().catch(() => {});
-    throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, signal.reason);
-  }
-
+async function readGraphqlResponse<T>(res: Response, endpoint: string): Promise<T> {
   let text: string;
   try {
     text = await res.text();
   } catch (cause) {
-    if (signal.aborted) {
-      throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, cause);
-    }
     throw new NsuidMapError(
       `Savanna response body read failed: ${cause instanceof Error ? cause.message : String(cause)}`,
       {
@@ -455,11 +391,6 @@ async function executeAttempt<T>(
             : undefined,
       },
     );
-  }
-
-  // Successful body reads also need this check: buffered data need not reject on abort.
-  if (signal.aborted) {
-    throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, signal.reason);
   }
 
   // A transient HTTP failure remains retryable regardless of its JSON envelope.
@@ -527,34 +458,6 @@ async function executeAttempt<T>(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function classifyAbort(
-  endpoint: string,
-  callerSignal: AbortSignal | undefined,
-  timeoutSignal: AbortSignal,
-  timeoutMs: number,
-  cause: unknown,
-): NsuidMapError {
-  if (callerSignal?.aborted) {
-    return new NsuidMapError('Savanna request aborted by caller', {
-      url: endpoint,
-      cause,
-      kind: 'abort',
-    });
-  }
-  if (timeoutSignal.aborted) {
-    return new NsuidMapError(`Savanna request timed out after ${timeoutMs}ms`, {
-      url: endpoint,
-      cause,
-      kind: 'timeout',
-    });
-  }
-  return new NsuidMapError('Savanna request aborted', {
-    url: endpoint,
-    cause,
-    kind: 'abort',
-  });
 }
 
 export interface RelatedItems {

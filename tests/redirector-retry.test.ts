@@ -30,10 +30,10 @@ for (const status of [429, 503]) {
   });
 }
 
-test('redirector Retry-After HTTP date is bounded by the request timeout', async () => {
+test('redirector Retry-After HTTP date returns promptly when waiting cannot fit', async () => {
   let calls = 0;
   const mapper = new NsuidMapper({
-    timeoutMs: 10,
+    timeoutMs: 10_000,
     fetch: (async () => {
       calls++;
       return new Response(null, {
@@ -44,8 +44,13 @@ test('redirector Retry-After HTTP date is bounded by the request timeout', async
       });
     }) as unknown as typeof fetch,
   });
+  const started = performance.now();
   const error = await mapper.resolveAppId(APP, 'AU').catch((e: unknown) => e);
-  expect((error as NsuidMapError).kind).toBe('timeout');
+  expect(performance.now() - started).toBeLessThan(1000);
+  expect((error as NsuidMapError).kind).toBe('http');
+  expect((error as NsuidMapError).status).toBe(503);
+  expect((error as NsuidMapError).retryAfterMs).toBeGreaterThan(50_000);
+  expect((error as NsuidMapError).retryable).toBeTrue();
   expect(calls).toBe(1);
 });
 
@@ -56,7 +61,7 @@ test('caller cancellation ends redirector server-directed retry waiting', async 
     fetch: (async () => {
       calls++;
       setTimeout(() => controller.abort(), 10);
-      return new Response(null, { status: 429, headers: { 'Retry-After': '3600' } });
+      return new Response(null, { status: 429, headers: { 'Retry-After': '1' } });
     }) as unknown as typeof fetch,
   });
   const error = await mapper

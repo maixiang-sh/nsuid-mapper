@@ -1,4 +1,4 @@
-/** Shared retry policy for the two Nintendo upstreams; each caller owns its timeout. */
+/** Retry limits for the shared upstream request executor. */
 export function normalizeRetries(value: number | undefined): number {
   if (value == null) return 2;
   if (!Number.isFinite(value) || value < 0) throw new TypeError('retries must be non-negative');

@@ -1,311 +1,93 @@
 # @nintendo-store/nsuid-mapper
 
-[中文说明](README.zh-CN.md)
+[中文说明](README.zh-CN.md) · [Technical design](docs/technical-design.zh-CN.md) · [Redirector protocol](docs/apps-redirector.md)
 
-Map a Nintendo eShop **nsuid** to the same product's nsuid in other regions.
+Map a Nintendo eShop NSUID to the same product in other countries. This independent
+Bun + TypeScript library uses public Nintendo endpoints and has no runtime dependencies.
+It is not an official Nintendo SDK.
 
-An nsuid is region-local: Street Fighter 6 is `70010000095202` in Japan and
-`70010000095203` in the US, and querying one in the other's context returns
-nothing rather than the equivalent. There is no upstream "same product, other
-region" API. This package builds that hop out of two public pieces.
+## Getting started
+
+```bash
+git clone https://github.com/maixiang-sh/nsuid-mapper.git
+cd nsuid-mapper
+bun install --frozen-lockfile
+bun run build
+```
+
+Inside the checkout, import the source directly:
 
 ```ts
-import { NsuidMapper } from '@nintendo-store/nsuid-mapper';
+import { NsuidMapper } from './src/index.ts';
 
 const mapper = new NsuidMapper();
-const r = await mapper.mapNsuid('70010000095202', {
+const result = await mapper.mapNsuid('70010000095202', {
   from: 'JP',
   to: ['HK', 'US', 'GB'],
 });
-
-r.targets;
-// [ { region: 'HK', nsuid: '70010000095206' },
-//   { region: 'US', nsuid: '70010000095203' },
-//   { region: 'GB', nsuid: '70010000095204' } ]
+console.log(result.targets);
+// Each target contains region and either nsuid or an unmapped reason.
 ```
 
-## What maps, and what does not
+In a consuming project, use the package name `@nintendo-store/nsuid-mapper`
+after adding the built checkout as a local dependency. No npm publication is required.
 
-Titles, DLC and bundles map when upstream provides a complete, unique SKU
-identity. Nothing is matched by name.
+## Mapping and limits
 
-| kind          | anchor                                      | how the target is found                     |
-| ------------- | ------------------------------------------- | ------------------------------------------- |
-| `7001` title  | appId, platform and full title-right set    | redirector plus verified upgrade candidates |
-| `7005` dlc    | platform and full right set                 | parent's DLC/upgrade list, unique SKU match |
-| `7007` bundle | platform, full rights and member signatures | all linked parents, unique identity match   |
+| Kind          | Identity used for matching                                                            |
+| ------------- | ------------------------------------------------------------------------------------- |
+| Title `7001`  | Application ID, platform and complete ROM rights, including linked edition candidates |
+| DLC `7005`    | Platform and complete rights; candidates come from the parent DLC and upgrade lists   |
+| Bundle `7007` | Platform, complete rights and every member's identity, including repeated members     |
 
-Application IDs can differ between regional builds of the same game. For example,
-Monster Hunter Rise uses `0100559011740000` in JP/HK and `0100b04011742000`
-in US/GB/AU. This mapper has no verified cross-build link between them and does
-not join them by name. A missing redirect is not proof that a country does not sell the game.
+Consumable bundle members use their exact `itemId` and publisher ID. Names and
+localized descriptions do not participate in matching.
 
-Bundles carry no appId of their own. A single member's first appId or right is
-insufficient: base and Switch 2 editions can share appIds, and passes can differ
-only in additional rights or subscription durations.
+Standalone demos `7003` and consumables `7009` have no supported target discovery
+path. Catalog tickets `7002` and normal tickets `7008` are recognized but not mapped.
+Missing identity evidence, ambiguous candidates and incomplete scans return a reason.
+Regional builds with different application IDs cannot be joined without an upstream link.
+A missing redirect does not establish that a product is unavailable in that country.
 
-### DLC identity
+An unresolved parent anchor is skipped. Each returned candidate must match the full
+source identity, but uniqueness applies only within the resolved parents' candidate
+lists, not the entire regional catalog. Network and schema failures still throw.
 
-DLC matching uses `labelPlatform` and every `romRights.titleId`, normalized and
-sorted. All rights contribute to parent discovery; the first right alone is
-not used to choose a target. Candidates from `dlcItems` and
-`upgradeInfo.upgradeDlcItem` are deduplicated by nsuid, and exactly one complete
-match is required. Different platforms, additional rights, ambiguous matches,
-or an incomplete candidate scan return a reason rather than a partial match.
+Each `mapNsuid` call accepts one NSUID and up to eight distinct target countries.
+Countries run concurrently; parents within one country are scanned sequentially.
+Parent and pagination limits prevent accepting matches from unfinished scans.
+Rules, request costs and verified counterexamples live in the
+[technical design](docs/technical-design.zh-CN.md).
 
-Rights are not universally unique product IDs. JP DLC `70050000072882` and its
-three sibling DLC products share `BEE` and `0400a3a01ee4d001`; the four target
-products in US, GB, AU and HK also share that identity. These mappings return
-`Ambiguous DLC SKU` because the selected identity fields cannot distinguish them.
-The public client rejects `DlcItem.itemId`; the consumable identity field cannot
-simply be reused for DLC.
+## Other methods
 
-`resolveNsuidsToAppIds` still returns one representative ID per title/DLC for
-compatibility. It is an ID lookup, not a complete cross-region SKU comparison.
+| Method                                         | Result                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| `resolveNsuidToAppId(nsuid, region)`           | One representative application/right ID, or `null`              |
+| `resolveNsuidsToAppIds(nsuids, region)`        | A `Map` of representative IDs for a same-catalog batch          |
+| `resolveAppIdToNsuid(appId, region, options?)` | Default redirect target, or `null`; does not verify the edition |
+| `resolveAppId(appId, region, options?)`        | The target and redirect metadata                                |
+| `enumerateSkus(appId, region, options?)`       | Candidate title SKUs reached through `acdIndex`                 |
+| `buildUrl(appId, region, acdIndex?)`           | Entry URL without making a request                              |
 
-### Bundle identity and limits
+Use `mapNsuid` when edition identity matters. An ID-only lookup is not a complete
+SKU comparison; bundles have no application ID of their own. Set `defaultRegion`
+on the constructor to omit the region argument from ID lookups.
 
-Bundle matching compares:
+Batch lookups send the input in one request. The client has no batch cap, but the
+upstream maximum is unknown. Split large inputs into modest sequential batches,
+for example 100 IDs. Country catalog sharing is an observation, not a guarantee
+of identical availability for every product.
 
-- The bundle's `labelPlatform` and **all** `romRights.titleId` values.
-- Each application / DLC member's type, platform, all application IDs and all ROM rights.
-- Each consumable member's `itemId` and `consumableItemGroup.publisher.id`.
-- Repeated members as separate entries; member ordering and hexadecimal ID casing do not matter.
+`contextFor(country)` selects the recorded default Savanna language.
+`getCountryLanguageInfo` and `isCountryLanguageSupported` expose the configured
+language snapshot; it does not guarantee translated text or product availability.
+KR/TW redirector limitations are observations, so requests are not permanently blocked.
 
-Consumable `itemId` values are opaque strings, compared exactly without trimming,
-case folding or parsing their words. Publisher ID scopes each consumable identity;
-the complete bundle's applications, platform and rights constrain the match too.
-`consumableItemGroup.id` is not compared: NBA 2K26 uses different group IDs across
-regions while the member `itemId` and publisher ID stay the same.
-
-Member selections include `PUBLIC` and `UNSEARCHABLE`. A non-searchable member
-can contain the rights that distinguish three-month and twelve-month passes.
-Candidate discovery follows the parent's base/upgrade links and examines all
-reachable candidates before accepting exactly one match.
-
-An application anchor with no target redirect is skipped. Matches are unique
-within the candidates returned by successfully resolved parents, not a guarantee
-that the entire regional catalog was enumerated. Each candidate must still match
-the complete source identity; no member is removed from comparison. Network,
-schema and permission failures throw instead of being skipped.
-
-`source.contentAppIds` contains every member application and right ID, used to
-find parent applications. `source.contentKeys` contains the canonical member
-signatures used for comparison. These are derived metadata, not upstream fields.
-
-Unsupported member types, missing application / DLC rights, missing consumable
-`itemId` or publisher ID, multiple
-exact matches, or incomplete scans return a `reason` without an nsuid. This
-intentionally leaves some bundles unmapped rather than selecting another
-edition. Parent listings do not cover every unavailable product: the verified
-`NOT_SALE` Monster Hunter Rise Deluxe bundle is absent, and that status is not
-accepted by the listing filter. The package does not search names or add a
-storefront scraping fallback.
-
-Per target country, scans are bounded to 16 parent titles, 40 DLC pages per
-parent, and 50 detailed bundle identities per request. Reaching a parent or
-paging cap prevents accepting a result from the incomplete scan.
-An empty page before the declared total also reports an incomplete scan; a
-zero-total empty list remains a complete result.
-
-Related-item queries select only what the current mapping needs: bundle paging
-collects candidate NSUIDs, then reads their complete identities in batches. It
-does not fetch unrelated DLC rights. Upgrade links and included bundles are
-selected only on the first page of each parent.
-
-**Standalone `7003` demos and `7009` consumables do not map.** They expose no
-application ID for parent discovery. A consumable's `itemId` can identify it within
-a bundle, whose other members supply parent anchors, but does not provide a lookup
-of the standalone consumable in other countries. Each target returns a reason:
+## Requests and errors
 
 ```ts
-const demo = await mapper.mapNsuid('70030000023159', { from: 'JP', to: ['US'] });
-demo.targets[0];
-// { region: 'US', reason: 'upstream exposes no application id for demos' }
-```
-
-`7002` catalog tickets and `7008` normal tickets are recognized as existing
-products but are not mapped. Their `source.kind` is `unknown` and `reason` names
-the unsupported upstream type, such as `Unsupported item type: CatalogTicketItem`.
-This differs from a product omitted by `itemsV2`, which returns a region lookup
-failure. Subscription tickets not exposed by `itemsV2` cannot be identified here.
-
-Two regions also answer with a reason rather than an nsuid: **KR** redirects to
-a generic storefront and **TW** returns a page with no redirect at all.
-
-## Fetching details for the mapped products
-
-This package deliberately does not fetch product data. It returns nsuids and
-gives you the pieces to query exactly the fields you want — asking for fifty
-when you need eight is the common waste here.
-
-```ts
-import { NsuidMapper, execute, contextFor, SHOP_ID } from '@nintendo-store/nsuid-mapper';
-
-// Your selection, your fields.
-const MY_QUERY = `
-query MyFields($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $nsUids: [NsUid!]!)
-@inContext(country: $country, language: $language, shopId: $shopId) {
-  item {
-    itemsV2(nsUids: $nsUids) {
-      __typename
-      ... on ApplicationItem {
-        nsUid formalName publisher { name } releaseDateOnEshop
-        platform { id name } languages { name isoCode } applications { id }
-      }
-      ... on DlcItem    { nsUid formalName publisher { name } releaseDateOnEshop romRights { titleId } }
-      ... on BundleItem { nsUid formalName publisher { name } releaseDateOnEshop }
-    }
-  }
-}`;
-
-const map = await mapper.mapNsuid(nsuid, { from: 'JP', to: ['JP', 'HK', 'US', 'GB'] });
-
-const rows = await Promise.all(
-  map.targets
-    .filter((t) => t.nsuid)
-    .map(async (t) => {
-      const { country, language } = contextFor(t.region);
-      const data = await execute(MY_QUERY, {
-        shopId: SHOP_ID,
-        country,
-        language,
-        nsUids: [Number(t.nsuid)],
-      });
-      return { region: t.region, ...data.item.itemsV2[0] };
-    }),
-);
-```
-
-Two things that will bite when writing a selection:
-
-- **Field names come from the schema, not from a client's output.** For example,
-  select `platform { id name }`, not a derived `platformName`. The minimal
-  mapping selections are in `src/upstreams/savanna.ts`.
-- **An invalid field returns `400 INVALID_PARAM` naming nothing.** Add fields one
-  at a time when something breaks.
-
-Selections depend on the object type. For edition matching, use `labelPlatform`;
-`platform.id` alone does not reliably distinguish base games from Switch 2
-editions. Do not assume every field on a title exists on DLC or bundles.
-
-## Cost
-
-| kind   | requests                                                                          |
-| ------ | --------------------------------------------------------------------------------- |
-| title  | 1 identity + 2–3 per region (redirect, candidate identity, linked editions)       |
-| dlc    | 1 identity + 2 per region                                                         |
-| bundle | 1 identity + parent redirects + related lists and candidate identities per region |
-
-Countries resolve concurrently, so the wall-clock cost of a map is roughly one
-country's latency rather than the sum.
-
-**One nsuid per `mapNsuid` call, and at most eight countries.** Countries fire
-together; batching nsuids as well would multiply the two counts into a burst
-against Nintendo's edge. A normal bundle has one deduplicated parent candidate
-and normally costs three requests per country when its related list and bundle
-identities each fit in one request. Linked editions and multi-game collections
-require more parent scans, performed sequentially within each country. All
-reachable parents are scanned to detect ambiguous matches; DLC pagination and
-large candidate batches add requests. The country cap is `MAX_REGIONS_PER_MAP`,
-and exceeding it throws rather than silently truncating.
-
-Eight is enough for one country per publishing region — JPN, USA, EUR, AUS,
-TWN, plus room for KOR, CHN and SEA, which the redirector does not serve yet.
-
-The id lookup sends its input in one request and has no client-side batch cap.
-This is not a promise of unlimited upstream capacity. On 2026-10-11, US probes
-with 50, 51, 100 and 101 valid-format IDs retained a known title's application ID;
-the upstream maximum is still unknown. Split large input lists into sequential,
-modest batches (for example, 100 IDs); do not interpret missing IDs as a successful
-check that the entire catalog was returned.
-
-### Country languages
-
-Savanna requires a `language` variable, but unavailable values can still return
-data. `MAPPABLE_COUNTRY_LANGUAGES` records official configured codes for the 45
-verified mapping countries; it does not guarantee a translated product variant.
-Savanna itself accepts more country configurations than the redirector maps.
-
-```ts
-import { getCountryLanguageInfo, isCountryLanguageSupported } from '@nintendo-store/nsuid-mapper';
-
-getCountryLanguageInfo('CH');
-// { defaultLanguage: 'de', languages: ['fr', 'de', 'it'] }
-
-isCountryLanguageSupported('US', 'es'); // true
-isCountryLanguageSupported('JP', 'en'); // false — not listed in JP country configuration
-```
-
-`contextFor(country)` uses the recorded default automatically. Identity fields
-such as nsuid and appId do not change with language; localized presentation
-fields such as language names can, but individual product text may remain unchanged.
-
-## How it works
-
-Two upstreams, neither of which is a cross-region API on its own:
-
-1. **Savanna GraphQL** — `nsuid → 16-hex application id`. The query lives in
-   `src/upstreams/savanna.ts` and includes SKU and upgrade identity.
-2. **`ec.nintendo.com/apps/{appId}/{REGION}`** — a redirector whose `Location`
-   carries that region's nsuid. Its request, timeout, SKU and `Location` parsing
-   live in `src/upstreams/redirector.ts`. Three response shapes are documented
-   in [`docs/apps-redirector.md`](docs/apps-redirector.md).
-
-`src/client.ts` is only the public facade, while `src/mapping.ts` contains the
-cross-region matching decisions. The two upstream protocols therefore can
-change independently without splitting this project into separate packages.
-
-### Network resilience
-
-Savanna and the AppID Redirector share a small retry policy: transient network
-failures, HTTP 429 and HTTP 5xx get up to two extra attempts with exponential
-backoff and jitter. `retries` configures both upstreams, at construction or per
-call; `0` disables retries and the maximum is `5`. Every attempt and backoff
-shares one request's timeout budget, which defaults to 10 seconds. Caller
-cancellation interrupts backoff and an already cancelled redirector call makes
-no request.
-
-On transient HTTP errors, a valid `Retry-After` (integer seconds or an HTTP date)
-is a minimum wait, combined with our backoff. Invalid values fall back to backoff.
-A wait longer than the remaining request budget ends in a timeout rather than an
-early retry; cancellation clears the waiting timer. Errors expose the parsed
-hint as optional `retryAfterMs`. This follows [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after).
-
-A transient Savanna HTTP status takes precedence even when the body contains
-GraphQL `errors`. Other GraphQL errors, other 4xx responses, malformed successful
-responses, timeouts, and caller cancellation are not retried. Redirector 200 /
-404 results and redirects without a usable product are not retried either;
-a redirect missing its Location is a non-retryable error. Redirector response
-bodies are released because only headers are needed.
-
-Successful responses require an object envelope and an object `data`; malformed
-envelopes return a `NsuidMapError` with `kind: 'response'`. This validates the
-GraphQL envelope, not every nested product field.
-
-Defaults can be adjusted globally or per call:
-
-```ts
-const mapper = new NsuidMapper({ timeoutMs: 15_000, retries: 3 });
-
-await mapper.resolveNsuidToAppId(nsuid, 'GB', {
-  timeoutMs: 8_000,
-  retries: 1,
-});
-```
-
-`timeoutMs` can override both Savanna and redirector requests per call. On either
-upstream, attempts share that request's timeout budget; retries never silently multiply it.
-Both accept only integer milliseconds from `1` to `120000`, defaulting to `10000`.
-Fractional, non-finite, non-positive and larger values throw `TypeError` before
-any request; they are not silently rounded or capped.
-Cancellation is checked before fetching and after a response arrives; Savanna
-also checks after reading the body. A buffered response cannot turn an already
-cancelled or timed-out request into a successful result.
-A map can make multiple requests, so this is not a whole-map deadline. Pass an
-`AbortSignal` when the complete mapping operation needs one.
-
-```ts
+const mapper = new NsuidMapper({ timeoutMs: 15_000, retries: 2 });
 await mapper.mapNsuid('70070000040805', {
   from: 'HK',
   to: ['JP', 'US', 'GB', 'AU'],
@@ -313,149 +95,53 @@ await mapper.mapNsuid('70070000040805', {
 });
 ```
 
-### Reading an unmapped result
+- `timeoutMs`: integer milliseconds from 1 to 120000, default 10000. It covers
+  one upstream request, including response reads, retries and backoff. Use `signal`
+  for a deadline covering an entire multi-request mapping.
+- `retries`: extra attempts for network errors and HTTP 429/5xx, default 2,
+  capped at 5; `0` disables retries. Backoff uses jitter.
+- `Retry-After`: integer seconds or an HTTP date, treated as a minimum wait.
+  If the server's wait cannot fit in the remaining budget, the original error
+  is thrown immediately, preserving `status` and `retryAfterMs`. `retryable: true`
+  means a caller may retry later; it does not mean this call will keep retrying.
+- Cancellation or an actually expired deadline returns `kind: 'abort'` or
+  `'timeout'`. Both stop retries and clear timers. Buffered responses are checked
+  before being returned, so cancellation is not lost.
 
-| Reason                      | What was observed                                                                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Source NSUID not returned   | The source catalog omitted the product; it may be unavailable there or belong to another region.                                   |
-| Application ID not resolved | The target redirector found no product for that ID; an unavailable product and a different regional AppID cannot be distinguished. |
-| No title identity returned  | A redirect resolved an NSUID, but the target identity query returned no title.                                                     |
-| No DLC / bundle candidates  | The resolved parents' queries returned no candidates. This does not establish that the target region never sold the product.       |
-| No SKU matches              | Candidates were returned, but none had matching identity evidence.                                                                 |
-| Ambiguous SKU               | Multiple candidates match the available fields; none is selected.                                                                  |
-| Scan incomplete             | A pagination/parent cap or early empty page left a scan unfinished; no partial match is accepted.                                  |
+Defaults can be overridden per call. Both upstreams also accept custom `headers`
+and an injectable `fetch`. Invalid timeout values throw `TypeError` before fetching.
+HTTP, GraphQL, malformed responses and cancellation use `NsuidMapError`; a hard
+failure in one target country rejects the whole `mapNsuid` call.
 
-`reason` is explanatory text and may change; use the presence of `nsuid` to
-detect a successful mapping. HTTP, schema and cancellation errors still reject
-the operation with `NsuidMapError` rather than producing a business reason.
+An unmapped target instead has a human-readable `reason`. Check whether `nsuid`
+is present rather than parsing that text. The [reason reference](docs/technical-design.zh-CN.md#未映射原因)
+explains the distinction between missing candidates, ambiguity and unfinished scans.
 
-## Resolving ids
+## Custom product queries
 
-Both directions, and both batched.
-
-| Direction     | Method                                          |
-| ------------- | ----------------------------------------------- |
-| nsuid → appId | `resolveNsuidToAppId` / `resolveNsuidsToAppIds` |
-| appId → nsuid | `resolveAppIdToNsuid` / `resolveAppId`          |
-
-```ts
-// One request, whatever the kinds. Every id asked for is in the result.
-const found = await mapper.resolveNsuidsToAppIds(
-  ['70010000095202', '70050000056264', '70070000034970'],
-  'JP',
-);
-// Map {
-//   '70010000095202' => '040078001ccf6000',  title
-//   '70050000056264' => '040078001ccf7003',  dlc
-//   '70070000034970' => null,                bundle — has no appId of its own
-// }
-```
-
-`null` is an answer, not a failure: bundles carry no application id, demos and
-consumables have none at all, and an nsuid not sold in that catalog has nothing
-to return. The lookup uses a selection of its own that asks only for the id, so
-it does not pay for the bundle fingerprint `mapNsuid` needs.
-
-### Region is the catalog, not the storefront
-
-The fourteen regions share **four** catalogs. An nsuid resolves anywhere in its
-own group and nowhere else, so any country in the right group will do:
-
-| Catalog | Regions                                 |
-| ------- | --------------------------------------- |
-| JP      | `JP`                                    |
-| NOA     | `US` `CA` `MX` `BR`                     |
-| NOE     | `GB` `DE` `FR` `ES` `IT` `NL` `AU` `NZ` |
-| HK      | `HK`                                    |
-
-```ts
-await mapper.resolveNsuidToAppId('70010000095203', 'US'); // '040078001ccf6000'
-await mapper.resolveNsuidToAppId('70010000095203', 'MX'); // same — same catalog
-await mapper.resolveNsuidToAppId('70010000095203', 'JP'); // null — different one
-```
-
-Measured 2026-07-23 for these samples. `AU` shares the NOE catalog in these
-lookups; a catalog group does not guarantee identical availability for every product.
-
-Set `defaultRegion` on the constructor to omit the argument.
-
-### Multi-SKU titles
-
-One appId can list as several products in a region — a Switch 1 release and its
-Switch 2 Edition, for instance. `enumerateSkus` walks `acdIndex` until the
-redirect repeats index 0:
-
-```ts
-await mapper.enumerateSkus('0100453019aa8000', 'JP');
-// [ { nsuid: '70010000088831', … },   HAC
-//   { nsuid: '70010000116668', … } ]  BEE, Switch 2 Edition
-```
-
-`buildUrl` builds the entry URL without a request.
+The exported `execute`, `contextFor` and `SHOP_ID` helpers allow caller-written
+Savanna selections. A complete example is in [examples/basic.ts](examples/basic.ts).
+Selections must match the upstream object type; an invalid field can reject the
+whole query. `labelPlatform`, rather than `platform.id`, distinguishes editions
+in the mapping identity.
 
 ## Development
 
-Development and tests use Bun. The build, type-check, lint and formatting
-scripts explicitly run their JavaScript tools with Bun, including tools whose
-launcher specifies Node.js. A separate Node.js installation is not required.
-
-The compiled ESM library uses standard JavaScript and Web APIs. Its Node.js
-compatibility declaration starts at 18.17 because cancellation uses
-`AbortSignal.any()`; this is a requirement for Node.js consumers, not Bun users.
+Development uses Bun 1.4.3 and TypeScript 7.0.2. The built ESM library also supports
+Node.js 18.17+, whose `AbortSignal.any()` is used for cancellation.
 
 ```bash
-git clone https://github.com/maixiang-sh/nsuid-mapper.git
-cd nsuid-mapper
-bun install --frozen-lockfile
-bun run check      # build, types, lint, format, offline tests
-bun run test:live  # the real endpoints
-LIVE=1 bun test tests/  # the complete suite, including real endpoints
+bun run check          # build, typecheck, lint, formatting and offline tests
+bun run test:live      # real Nintendo API requests
+bun run example        # runnable examples; also makes real requests
+LIVE=1 bun test tests/ # offline and live tests together
 ```
 
-Live tests retry once after a timeout, network error, HTTP 429 or HTTP 5xx,
-and print the retry reason. A second failure still fails the test. Assertions,
-schema errors and caller cancellation are not retried. This test-only retry
-does not change the SDK's request timeout or automatic retry policy.
+Live tests retry transient failures once; assertion and schema failures are not
+retried. Recorded identity fixtures are small, and synthetic mutations are marked.
+The [technical design](docs/technical-design.zh-CN.md#验证样本) links to regression
+cases and explains their evidence and limitations.
 
-## SKU identity and upgrades
+## License
 
-`resolveAppIdToNsuid` still returns the redirector's default SKU (`acdIndex=0`).
-`mapNsuid` checks that the source has an application ID, platform and rights before
-requesting target countries. It verifies the source and target platform and complete
-sorted title-right set.
-It examines the default target plus the base/upgrade titles linked by `upgradeInfo`.
-It returns an unmapped result with a reason when the evidence is missing, no candidate
-fits, or several candidates match; it never substitutes the ordinary edition for a
-Switch 2 Edition. Unlinked variants are not guessed from an index or name.
-
-Upgrade DLC is searched through `upgradeInfo.upgradeDlcItem` as well as `dlcItems`,
-using the platform and full DLC right set to verify the match. Request cancellation and timeout
-remain non-retryable even when they occur while reading the response body.
-
-### Regression fixtures
-
-`tests/fixtures/bundles.json` and `tests/fixtures/dlcs.json` store only the minimal mapping fields from real
-Nintendo responses verified on 2026-10-11. Offline tests cover edition mix-ups,
-non-searchable members, multi-right DLC, repeated members, ambiguous candidates
-and scan caps. Consumable fixtures cover The Crew's three editions, FC 26's nine
-US bundles with identical member counts, and NBA 2K26's different regional group
-IDs. Missing identities and exact `itemId` comparisons have regression coverage.
-Request tests cover HTTP errors envelopes, malformed JSON, redirector retry recovery /
-exhaustion, cancellation during backoff, source preflight and per-call timeout overrides. Synthetic mutations are marked in tests. Live regressions verify
-both correct mappings and explicit refusal when current upstream evidence is
-insufficient. Live assertions are dated observations; future catalog changes
-can require updating them after verification.
-
-Shared-right DLC has a minimal real offline fixture and live ambiguity checks.
-Other live cases cover Anime Codex's current empty JP candidate discovery,
-the separate Rise / Astral Ascent AppID groups, GB/AU reverse Crew mapping,
-Grand Garage versus Deluxe, and free trials represented as `ApplicationItem`.
-Star Fox Demo `70030000025288` is a US sample; the same ID is currently omitted
-in AU. Missing and unsupported sources are checked to make no target requests.
-An empty JP candidate result is a dated observation, not a permanent availability claim.
-Astral Ascent covers both HAC and BEE builds; AU V-Bucks covers the 800, 2,400
-and 12,500 packs. Deterministic buffered-response tests cover aborts and timeouts
-on both transports independently of runtime buffering behavior.
-
-Development uses Bun `1.4.3` (pinned in `packageManager`) and TypeScript `7.0.2`.
-These are the stable versions verified on 2026-10-11; canary/nightly builds are not used.
+[MIT](LICENSE)

@@ -29,30 +29,12 @@ const UNRESOLVED_NSUID_REASON =
   'The application ID could not be resolved in the target region; the product may be unavailable or use a different regional application ID';
 
 /** Region → the `@inContext` pair its catalog answers in. */
-const REGION_CONTEXT: Record<string, { country: string; language: string }> = {
-  JP: { country: 'JP', language: 'ja' },
-  US: { country: 'US', language: 'en' },
-  CA: { country: 'CA', language: 'en' },
-  MX: { country: 'MX', language: 'es' },
-  GB: { country: 'GB', language: 'en' },
-  DE: { country: 'DE', language: 'de' },
-  FR: { country: 'FR', language: 'fr' },
-  ES: { country: 'ES', language: 'es' },
-  IT: { country: 'IT', language: 'it' },
-  NL: { country: 'NL', language: 'nl' },
-  AU: { country: 'AU', language: 'en' },
-  NZ: { country: 'NZ', language: 'en' },
-  HK: { country: 'HK', language: 'zh' },
-  KR: { country: 'KR', language: 'ko' },
-};
-
 export function contextFor(region: string): { country: string; language: string } {
   const country = normalizeRegion(region);
-  const knownLanguage = getCountryLanguageInfo(country);
-  return (
-    (knownLanguage && { country, language: knownLanguage.defaultLanguage }) ??
-    REGION_CONTEXT[country] ?? { country, language: 'en' }
-  );
+  // KR can be a source catalog even though its redirector does not map targets.
+  const language =
+    getCountryLanguageInfo(country)?.defaultLanguage ?? (country === 'KR' ? 'ko' : 'en');
+  return { country, language };
 }
 
 /** One region's answer for one source nsuid. */

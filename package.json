@@ -30,6 +30,7 @@
     "bun": ">=1.1.0"
   },
   "scripts": {
+    "example": "bun examples/basic.ts",
     "build": "bun run scripts/clean-dist.ts && bun --bun run tsc -p tsconfig.build.json",
     "test": "bun test tests/",
     "test:live": "LIVE=1 bun test tests/live.test.ts tests/live.regressions.test.ts",

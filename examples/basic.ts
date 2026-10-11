@@ -44,7 +44,7 @@ console.log(await client.resolveAppIdToNsuid('0000000000000000', 'JP'));
 console.log('\n── nsuid → nsuid, one call per kind ──');
 // Street Fighter 6: title, one of its DLC, and a bundle of DLC. The three take
 // different routes internally but the caller does not need to know which.
-// One nsuid per call: each country costs up to three requests, all at once.
+// Target countries run concurrently; pagination and related editions add requests.
 const mapped = [];
 for (const nsuid of ['70010000095202', '70050000056264', '70070000034970', '70030000023159']) {
   mapped.push(await client.mapNsuid(nsuid, { from: 'JP', to: ['US', 'GB', 'HK', 'KR'] }));
@@ -64,8 +64,7 @@ const demo = mapped.find((m) => m.source.kind === 'demo');
 console.log('demo reason:', demo?.targets[0]?.reason);
 
 console.log('\n── caller-written selection: only the fields you need ──');
-// This package returns nsuids, not product data. You write the query, so a
-// four-region lookup fetches eight fields instead of fifty.
+// Select the product fields you need after mapping the regional NSUIDs.
 const MY_QUERY = `
 query MyFields($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $nsUids: [NsUid!]!)
 @inContext(country: $country, language: $language, shopId: $shopId) {

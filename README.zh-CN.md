@@ -20,7 +20,7 @@
 
 独立体验版 `7003`、消耗品 `7009` 暂不映射；兑换券 `7002` 和课程券 `7008` 返回不支持的类型说明。上游未暴露的商品、身份信息不足、多个候选均匹配或分页未完成时，返回未映射原因，不猜测其他版本。
 
-同款游戏的不同地区版本可能使用不同 AppID。例如怪猎崛起日港版为 `0100559011740000`，欧美澳版为 `0100b04011742000`，当前没有可靠关系可跨越两组编号。Redirector 未解析到商品不能解释成“目标区没卖”。ROM 权益也不保证商品唯一：日区 DLC `70050000072882` 与三个同级 DLC 共用平台和权益，目标区同样如此，目前返回歧义。
+同款游戏可能使用不同的跨区 AppID，ROM 权益也不保证商品唯一。具体反例和已核实编号集中在[技术设计](docs/technical-design.zh-CN.md#验证样本)。Redirector 未解析到商品不能解释成“目标区没卖”。
 
 ## 本地使用
 
@@ -55,7 +55,7 @@ console.log(result.targets);
 - `enumerateSkus`：查看 Redirector 的候选商品。
 - `contextFor`：获取国家对应的查询语言。
 
-完整参数和自定义 GraphQL 查询示例见 [英文 README](README.md)。
+完整参数见[英文 README](README.md)，自定义 GraphQL 查询见[可运行示例](examples/basic.ts)。
 
 ## 请求与错误
 
@@ -63,7 +63,7 @@ Savanna 和 Redirector 都对网络错误、HTTP 429 / 5xx 默认额外重试 2 
 构造参数或单次调用的 `retries` 同时作用于两者，设为 `0` 可禁用，上限为 `5`。
 全部尝试与退避等待共用单次请求的超时预算，默认 10 秒；超时、调用方取消和明确的非暂时错误不重试。
 
-暂时 HTTP 错误会读取有效的 `Retry-After`，支持整数秒及 HTTP 日期；等待时间至少为服务器要求和本地退避两者的较大值。无效值使用本地退避，等待超过剩余预算则超时，不提前重试。取消 / 超时会清除等待计时器；错误对象的可选 `retryAfterMs` 保存解析后的提示，单位毫秒。语义依据 [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after)。
+暂时 HTTP 错误会读取有效的 `Retry-After`，支持整数秒及 HTTP 日期；等待时间至少为服务器要求和本地退避两者的较大值。无效值使用本地退避，如果服务器指定的等待时间无法放进剩余预算，立即抛出原始错误，保留 HTTP `status` 和 `retryAfterMs`。`retryable: true` 表示调用方可稍后重试，不代表本次调用会继续等待。取消 / 超时会清除等待计时器；错误对象的可选 `retryAfterMs` 保存解析后的提示，单位毫秒。语义依据 [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after)。
 
 两套请求层的 `timeoutMs` 均只接受 `1`–`120000` 的整数毫秒；小数、非有限值、非正值或超出范围时，在请求前抛出 `TypeError`，不再静默取整或封顶。请求前、收到响应后均检查取消；Savanna 读取响应体成功后再检查一次，避免缓冲响应使已取消 / 超时的请求返回成功。
 
@@ -89,14 +89,13 @@ await mapper.mapNsuid('70070000040805', {
 ```bash
 bun run check          # 构建、类型、lint、格式及离线测试
 bun run test:live      # 实际请求 Nintendo 接口
+bun run example        # 运行示例，也会请求真实接口
 LIVE=1 bun test tests/ # 全部测试，包含线上验证
 ```
 
 真实样本仅保存匹配所需的身份字段。合成的异常分页、重复候选等测试与真实商品样本分开标注。线上数据可能变化，失败后需要核对实际响应；断言和 schema 错误不会被自动重试掩盖。
 
-回归覆盖共享权益 DLC 的歧义、Anime Codex 当前日区未返回候选、不同地区 AppID、Crew 豪华版 / Grand Garage 及英澳双向映射。Star Fox Demo `70030000025288` 使用美区样本；澳区同号当前未返回。缺失源商品与不支持类型均检查不会发起目标区请求。真实编号及限制见[技术设计](docs/technical-design.zh-CN.md#验证样本)。
-
-Astral Ascent 同时覆盖 HAC / BEE 两组地区版本；V-Bucks 覆盖 800、2,400、12,500 三档。取消与超时另有确定性的缓冲响应测试，不依赖 Bun 的响应缓冲时序。
+实测编号、回归覆盖和已知限制统一见[技术设计](docs/technical-design.zh-CN.md#验证样本)及其链接的测试文件。
 
 开发工具使用 Bun；构建后的 ESM 库也兼容 Node.js 18.17 及以上版本。
 

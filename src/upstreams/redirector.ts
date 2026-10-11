@@ -7,7 +7,8 @@ import {
 } from '../constants.ts';
 import { NsuidMapError } from '../errors.ts';
 import { mergeHeaders } from '../headers.ts';
-import { normalizeRetries, parseRetryAfter, retryDelay, waitForRetry } from '../retry.ts';
+import { normalizeRetries, parseRetryAfter } from '../retry.ts';
+import { requestWithRetry } from '../request.ts';
 import { normalizeTimeoutMs } from '../timeout.ts';
 import {
   isCatalogId,
@@ -102,76 +103,47 @@ export class AppIdRedirector {
     const reg = normalizeRegion(region);
     const acdIndex = parseAcdIndex(options.acdIndex);
     const url = this.buildUrl(id, reg, acdIndex);
-    const timeoutMs = normalizeTimeoutMs(options.timeoutMs ?? this.timeoutMs);
-    const retries = normalizeRetries(options.retries ?? this.retries);
-    const timeoutController = new AbortController();
-    const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
-    const signal = options.signal
-      ? AbortSignal.any([options.signal, timeoutController.signal])
-      : timeoutController.signal;
-    const fetchImpl = options.fetch ?? this.fetchImpl;
-
-    const headers = mergeHeaders(DEFAULT_HEADERS, this.customHeaders, options.headers);
-
-    try {
-      // All attempts and backoff share this request's timeout and caller signal.
-      for (let attempt = 0; ; attempt++) {
-        try {
-          if (signal.aborted) throw signal.reason;
-          const res = await fetchImpl(url, { method: 'GET', redirect: 'manual', signal, headers });
-          try {
-            // Even buffered headers can be returned after the caller cancels.
-            if (signal.aborted) throw signal.reason;
-            if (res.status === 404) return null;
-            if (res.status >= 300 && res.status < 400) {
-              const location = res.headers.get('location');
-              if (!location) {
-                throw new NsuidMapError(`Redirect without Location: ${url}`, {
-                  status: res.status,
-                  url,
-                });
-              }
-              return parseResolveResult({
-                appId: id,
-                region: reg,
-                acdIndex,
-                location,
-                baseUrl: this.baseUrl,
-              });
-            }
-            if (res.status === 200) return null;
-            throw new NsuidMapError(`Unexpected status ${res.status} for AppID resolve: ${url}`, {
+    return requestWithRetry({
+      url,
+      label: 'AppID resolve',
+      init: {
+        method: 'GET',
+        redirect: 'manual',
+        headers: mergeHeaders(DEFAULT_HEADERS, this.customHeaders, options.headers),
+      },
+      options: {
+        ...options,
+        fetch: options.fetch ?? this.fetchImpl,
+        timeoutMs: options.timeoutMs ?? this.timeoutMs,
+        retries: options.retries ?? this.retries,
+      },
+      readResponse: (res) => {
+        if (res.status === 404 || res.status === 200) return null;
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location');
+          if (!location) {
+            throw new NsuidMapError(`Redirect without Location: ${url}`, {
               status: res.status,
               url,
-              kind: 'http',
-              retryable: res.status === 429 || res.status >= 500,
-              retryAfterMs: parseRetryAfter(res.headers.get('Retry-After')),
             });
-          } finally {
-            // Only headers are needed. Release bodies before retrying or returning.
-            void res.body?.cancel().catch(() => {});
           }
-        } catch (cause) {
-          if (signal.aborted) throw classifyAbort(url, options.signal, timeoutMs, cause);
-          const error =
-            cause instanceof NsuidMapError
-              ? cause
-              : new NsuidMapError(
-                  `AppID resolve failed: ${cause instanceof Error ? cause.message : String(cause)}`,
-                  { url, cause, kind: 'network', retryable: true },
-                );
-          if (!error.retryable || attempt >= retries) throw error;
-          try {
-            await waitForRetry(retryDelay(attempt, error.retryAfterMs), signal);
-          } catch (waitError) {
-            if (signal.aborted) throw classifyAbort(url, options.signal, timeoutMs, waitError);
-            throw waitError;
-          }
+          return parseResolveResult({
+            appId: id,
+            region: reg,
+            acdIndex,
+            location,
+            baseUrl: this.baseUrl,
+          });
         }
-      }
-    } finally {
-      clearTimeout(timer);
-    }
+        throw new NsuidMapError(`Unexpected status ${res.status} for AppID resolve: ${url}`, {
+          status: res.status,
+          url,
+          kind: 'http',
+          retryable: res.status === 429 || res.status >= 500,
+          retryAfterMs: parseRetryAfter(res.headers.get('Retry-After')),
+        });
+      },
+    });
   }
 
   async enumerateSkus(
@@ -261,21 +233,6 @@ export function parseStorefrontPath(location: string): {
     pathKind: pathKindFromSegment(match[3]),
     nsuid: match[4],
   };
-}
-
-function classifyAbort(
-  url: string,
-  callerSignal: AbortSignal | undefined,
-  timeoutMs: number,
-  cause: unknown,
-): NsuidMapError {
-  const abortedByCaller = callerSignal?.aborted;
-  return new NsuidMapError(
-    abortedByCaller
-      ? `AppID resolve aborted by caller: ${url}`
-      : `AppID resolve timed out after ${timeoutMs}ms: ${url}`,
-    { url, cause, kind: abortedByCaller ? 'abort' : 'timeout' },
-  );
 }
 
 function parseEnumerateMax(value: number): number {
