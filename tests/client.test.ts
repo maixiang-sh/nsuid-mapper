@@ -302,6 +302,9 @@ describe('NsuidMapper (mocked)', () => {
     expect(graphql.headers.get('content-type')).toBe('application/json');
     expect(graphql.headers.get('x-nintendo-savanna-client-id')).toBeTruthy();
     for (const request of [redirect, graphql]) {
+      expect(request.headers.get('user-agent')).toContain(
+        'https://github.com/maixiang-sh/nsuid-mapper',
+      );
       expect(request.headers.get('x-client')).toBe('client');
       expect(request.headers.get('x-call')).toBe('call');
       expect(request.headers.get('x-precedence')).toBe('call');

@@ -6,14 +6,20 @@ import { fetchRelatedItems } from '../src/upstreams/savanna.ts';
 import { live } from './live-helper.ts';
 
 live(
-  'real redirector retries after one injected 503 and preserves both country results',
+  'real redirector honors Retry-After after one injected 503 and preserves both country results',
   async () => {
     let auAttempts = 0;
+    let failedAt = 0;
+    let retriedAt = 0;
     const client = new NsuidMapper({
       timeoutMs: 15_000,
       fetch: (async (url, init) => {
         if (init?.method === 'GET' && String(url).endsWith('/AU')) {
-          if (++auAttempts === 1) return new Response(null, { status: 503 });
+          if (++auAttempts === 1) {
+            failedAt = Date.now();
+            return new Response(null, { status: 503, headers: { 'Retry-After': '1' } });
+          }
+          retriedAt = Date.now();
         }
         // Only the first AU error is synthetic; all successful responses are live.
         return fetch(url, init);
@@ -22,6 +28,7 @@ live(
     const r = await client.mapNsuid('70010000000707', { from: 'US', to: ['AU', 'US'] });
     expect(r.targets.map((t) => t.nsuid)).toEqual(['70010000000706', '70010000000707']);
     expect(auAttempts).toBe(2);
+    expect(retriedAt - failedAt).toBeGreaterThanOrEqual(1000);
   },
   120_000,
 );

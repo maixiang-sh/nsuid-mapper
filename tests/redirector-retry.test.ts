@@ -9,6 +9,63 @@ const TARGET = 70010000000706;
 const redirect = () =>
   new Response(null, { status: 307, headers: { location: `/AU/en/titles/${TARGET}` } });
 
+for (const status of [429, 503]) {
+  test(`redirector honors Retry-After before retrying HTTP ${status}`, async () => {
+    let calls = 0;
+    let receivedAt = 0;
+    let retriedAt = 0;
+    const mapper = new NsuidMapper({
+      fetch: (async () => {
+        if (++calls === 1) {
+          receivedAt = Date.now();
+          return new Response(null, { status, headers: { 'Retry-After': '1' } });
+        }
+        retriedAt = Date.now();
+        return redirect();
+      }) as unknown as typeof fetch,
+    });
+    expect(await mapper.resolveAppIdToNsuid(APP, 'AU')).toBe(String(TARGET));
+    expect(calls).toBe(2);
+    expect(retriedAt - receivedAt).toBeGreaterThanOrEqual(1000);
+  });
+}
+
+test('redirector Retry-After HTTP date is bounded by the request timeout', async () => {
+  let calls = 0;
+  const mapper = new NsuidMapper({
+    timeoutMs: 10,
+    fetch: (async () => {
+      calls++;
+      return new Response(null, {
+        status: 503,
+        headers: {
+          'Retry-After': new Date(Date.now() + 60_000).toUTCString(),
+        },
+      });
+    }) as unknown as typeof fetch,
+  });
+  const error = await mapper.resolveAppId(APP, 'AU').catch((e: unknown) => e);
+  expect((error as NsuidMapError).kind).toBe('timeout');
+  expect(calls).toBe(1);
+});
+
+test('caller cancellation ends redirector server-directed retry waiting', async () => {
+  let calls = 0;
+  const controller = new AbortController();
+  const mapper = new NsuidMapper({
+    fetch: (async () => {
+      calls++;
+      setTimeout(() => controller.abort(), 10);
+      return new Response(null, { status: 429, headers: { 'Retry-After': '3600' } });
+    }) as unknown as typeof fetch,
+  });
+  const error = await mapper
+    .resolveAppId(APP, 'AU', { signal: controller.signal })
+    .catch((e: unknown) => e);
+  expect((error as NsuidMapError).kind).toBe('abort');
+  expect(calls).toBe(1);
+});
+
 for (const failure of ['network', 429, 503] as const) {
   test(`redirector recovers from a transient ${failure}`, async () => {
     let calls = 0;

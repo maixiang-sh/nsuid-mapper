@@ -12,7 +12,9 @@
  */
 
 import { NsuidMapError } from '../errors.ts';
-import { backoffDelay, normalizeRetries, waitForRetry } from '../retry.ts';
+import { USER_AGENT } from '../constants.ts';
+import { mergeHeaders } from '../headers.ts';
+import { normalizeRetries, parseRetryAfter, retryDelay, waitForRetry } from '../retry.ts';
 import { normalizeTimeoutMs } from '../timeout.ts';
 import type { RequestOptions } from '../types.ts';
 
@@ -33,8 +35,7 @@ const HEADERS: Record<string, string> = {
   Origin: 'https://ec.nintendo.com',
   Referer: 'https://ec.nintendo.com/',
   'x-nintendo-savanna-client-id': SAVANNA_CLIENT_ID,
-  'User-Agent':
-    'Mozilla/5.0 (compatible; nintendo-store-nsuid-mapper/0.1; +https://ec.nintendo.com)',
+  'User-Agent': USER_AGENT,
 };
 
 /**
@@ -362,8 +363,6 @@ export async function execute<T>(
   const retries = normalizeRetries(options?.retries);
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const signal = options?.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
-  const sleep =
-    options?.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -383,7 +382,7 @@ export async function execute<T>(
       if (signal.aborted)
         throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, error);
       try {
-        await waitForRetry(backoffDelay(attempt), sleep, signal);
+        await waitForRetry(retryDelay(attempt, error.retryAfterMs), signal, options?.sleep);
       } catch (sleepError) {
         if (!signal.aborted) throw sleepError;
         throw classifyAbort(endpoint, options?.signal, timeoutSignal, timeoutMs, sleepError);
@@ -450,6 +449,10 @@ async function executeAttempt<T>(
         cause,
         retryable: true,
         kind: 'network',
+        retryAfterMs:
+          res.status === 429 || res.status >= 500
+            ? parseRetryAfter(res.headers.get('Retry-After'))
+            : undefined,
       },
     );
   }
@@ -466,6 +469,7 @@ async function executeAttempt<T>(
       url: endpoint,
       retryable: true,
       kind: 'http',
+      retryAfterMs: parseRetryAfter(res.headers.get('Retry-After')),
     });
   }
 
@@ -551,14 +555,6 @@ function classifyAbort(
     cause,
     kind: 'abort',
   });
-}
-
-function mergeHeaders(...sources: Array<Record<string, string> | undefined>): Headers {
-  const headers = new Headers();
-  for (const source of sources) {
-    for (const [name, value] of Object.entries(source ?? {})) headers.set(name, value);
-  }
-  return headers;
 }
 
 export interface RelatedItems {

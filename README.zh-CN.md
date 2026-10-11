@@ -51,7 +51,7 @@ console.log(result.targets);
 其他常用方法：
 
 - `resolveAppIdToNsuid`：通过应用编号获取目标国家的默认商品编号；本身不保证版本一致。
-- `resolveNsuidsToAppIds`：同区批量查询应用编号，返回一个代表编号，不等于完整商品身份。
+- `resolveNsuidsToAppIds`：同区批量查询应用编号，返回一个代表编号，不等于完整商品身份。当前输入作为一次请求发送，客户端未设批量上限，不代表上游无限容量；大量编号建议每批约 100 条、串行调用。
 - `enumerateSkus`：查看 Redirector 的候选商品。
 - `contextFor`：获取国家对应的查询语言。
 
@@ -62,6 +62,8 @@ console.log(result.targets);
 Savanna 和 Redirector 都对网络错误、HTTP 429 / 5xx 默认额外重试 2 次。
 构造参数或单次调用的 `retries` 同时作用于两者，设为 `0` 可禁用，上限为 `5`。
 全部尝试与退避等待共用单次请求的超时预算，默认 10 秒；超时、调用方取消和明确的非暂时错误不重试。
+
+暂时 HTTP 错误会读取有效的 `Retry-After`，支持整数秒及 HTTP 日期；等待时间至少为服务器要求和本地退避两者的较大值。无效值使用本地退避，等待超过剩余预算则超时，不提前重试。取消 / 超时会清除等待计时器；错误对象的可选 `retryAfterMs` 保存解析后的提示，单位毫秒。语义依据 [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after)。
 
 两套请求层的 `timeoutMs` 均只接受 `1`–`120000` 的整数毫秒；小数、非有限值、非正值或超出范围时，在请求前抛出 `TypeError`，不再静默取整或封顶。请求前、收到响应后均检查取消；Savanna 读取响应体成功后再检查一次，避免缓冲响应使已取消 / 超时的请求返回成功。
 

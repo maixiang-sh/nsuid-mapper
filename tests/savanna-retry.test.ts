@@ -5,6 +5,95 @@ import { execute } from '../src/upstreams/savanna.ts';
 
 const query = 'query Test { __typename }';
 
+test('a failed transient response body still retains the server retry hint', async () => {
+  let calls = 0;
+  const delays: number[] = [];
+  await execute(
+    query,
+    {},
+    {
+      sleep: async (ms) => {
+        delays.push(ms);
+      },
+      fetch: (async () => {
+        if (++calls > 1) return Response.json({ data: { ok: true } });
+        const response = new Response('{}', { status: 503, headers: { 'Retry-After': '2' } });
+        response.text = async () => {
+          throw new TypeError('body connection lost');
+        };
+        return response;
+      }) as unknown as typeof fetch,
+    },
+  );
+  expect(calls).toBe(2);
+  expect(delays).toEqual([2000]);
+});
+
+test('Savanna respects Retry-After seconds and HTTP dates on transient errors', async () => {
+  for (const status of [429, 503]) {
+    for (const hint of ['2', new Date(Date.now() + 60_000).toUTCString()]) {
+      let calls = 0;
+      const delays: number[] = [];
+      await execute(
+        query,
+        {},
+        {
+          sleep: async (delay) => {
+            delays.push(delay);
+          },
+          fetch: (async () =>
+            ++calls === 1
+              ? new Response('{}', { status, headers: { 'Retry-After': hint } })
+              : Response.json({ data: { ok: true } })) as unknown as typeof fetch,
+        },
+      );
+      expect(calls).toBe(2);
+      expect(delays).toHaveLength(1);
+      if (hint === '2') expect(delays[0]).toBe(2000);
+      else expect(delays[0]).toBeGreaterThan(50_000);
+    }
+  }
+});
+
+for (const hint of ['1', '9'.repeat(400)]) {
+  test(`Savanna Retry-After ${hint.length > 1 ? 'overflow' : 'seconds'} cannot exceed the request budget`, async () => {
+    let calls = 0;
+    const error = await execute(
+      query,
+      {},
+      {
+        timeoutMs: 10,
+        fetch: (async () => {
+          calls++;
+          return new Response('{}', { status: 429, headers: { 'Retry-After': hint } });
+        }) as unknown as typeof fetch,
+      },
+    ).catch((e: unknown) => e);
+    expect((error as NsuidMapError).kind).toBe('timeout');
+    expect((error as NsuidMapError).retryable).toBeFalse();
+    expect(calls).toBe(1);
+  });
+}
+
+test('caller cancellation ends Savanna server-directed retry waiting', async () => {
+  let calls = 0;
+  const controller = new AbortController();
+  const error = await execute(
+    query,
+    {},
+    {
+      signal: controller.signal,
+      fetch: (async () => {
+        calls++;
+        setTimeout(() => controller.abort(), 10);
+        return new Response('{}', { status: 429, headers: { 'Retry-After': '3600' } });
+      }) as unknown as typeof fetch,
+    },
+  ).catch((e: unknown) => e);
+  expect((error as NsuidMapError).kind).toBe('abort');
+  expect(calls).toBe(1);
+});
+
 describe('independent Savanna transport resilience', () => {
   test('retries transient connection failures and returns the recovered response', async () => {
     let calls = 0;

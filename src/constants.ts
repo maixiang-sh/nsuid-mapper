@@ -8,10 +8,13 @@ export const EC_BASE = 'https://ec.nintendo.com';
  */
 export const APPS_PATH = '/apps';
 
+/** Identify this independent client rather than the upstream service. */
+export const USER_AGENT =
+  'Mozilla/5.0 (compatible; nintendo-store-nsuid-mapper/0.1; +https://github.com/maixiang-sh/nsuid-mapper)';
+
 export const DEFAULT_HEADERS: Record<string, string> = {
   Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'User-Agent':
-    'Mozilla/5.0 (compatible; nintendo-store-nsuid-mapper/0.1; +https://ec.nintendo.com)',
+  'User-Agent': USER_AGENT,
   // Avoid following client RSC prefetch noise; we only need Location.
   'Accept-Language': 'en,ja;q=0.9',
 };

@@ -6,7 +6,8 @@ import {
   MAX_ENUMERATE_LIMIT,
 } from '../constants.ts';
 import { NsuidMapError } from '../errors.ts';
-import { backoffDelay, normalizeRetries, waitForRetry } from '../retry.ts';
+import { mergeHeaders } from '../headers.ts';
+import { normalizeRetries, parseRetryAfter, retryDelay, waitForRetry } from '../retry.ts';
 import { normalizeTimeoutMs } from '../timeout.ts';
 import {
   isCatalogId,
@@ -111,7 +112,6 @@ export class AppIdRedirector {
     const fetchImpl = options.fetch ?? this.fetchImpl;
 
     const headers = mergeHeaders(DEFAULT_HEADERS, this.customHeaders, options.headers);
-    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
     try {
       // All attempts and backoff share this request's timeout and caller signal.
@@ -145,6 +145,7 @@ export class AppIdRedirector {
               url,
               kind: 'http',
               retryable: res.status === 429 || res.status >= 500,
+              retryAfterMs: parseRetryAfter(res.headers.get('Retry-After')),
             });
           } finally {
             // Only headers are needed. Release bodies before retrying or returning.
@@ -161,7 +162,7 @@ export class AppIdRedirector {
                 );
           if (!error.retryable || attempt >= retries) throw error;
           try {
-            await waitForRetry(backoffDelay(attempt), sleep, signal);
+            await waitForRetry(retryDelay(attempt, error.retryAfterMs), signal);
           } catch (waitError) {
             if (signal.aborted) throw classifyAbort(url, options.signal, timeoutMs, waitError);
             throw waitError;
@@ -316,12 +317,4 @@ function parseResolveResult(args: {
     redirectUrl,
     language: store.language,
   };
-}
-
-function mergeHeaders(...sources: Array<Record<string, string> | undefined>): Headers {
-  const headers = new Headers();
-  for (const source of sources) {
-    for (const [name, value] of Object.entries(source ?? {})) headers.set(name, value);
-  }
-  return headers;
 }

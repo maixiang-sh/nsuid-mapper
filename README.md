@@ -213,8 +213,12 @@ and exceeding it throws rather than silently truncating.
 Eight is enough for one country per publishing region — JPN, USA, EUR, AUS,
 TWN, plus room for KOR, CHN and SEA, which the redirector does not serve yet.
 
-The id lookup has no such limit: `resolveNsuidsToAppIds` stays one request
-however many nsuids you pass, so batch freely there.
+The id lookup sends its input in one request and has no client-side batch cap.
+This is not a promise of unlimited upstream capacity. On 2026-10-11, US probes
+with 50, 51, 100 and 101 valid-format IDs retained a known title's application ID;
+the upstream maximum is still unknown. Split large input lists into sequential,
+modest batches (for example, 100 IDs); do not interpret missing IDs as a successful
+check that the entire catalog was returned.
 
 ### Country languages
 
@@ -261,6 +265,12 @@ call; `0` disables retries and the maximum is `5`. Every attempt and backoff
 shares one request's timeout budget, which defaults to 10 seconds. Caller
 cancellation interrupts backoff and an already cancelled redirector call makes
 no request.
+
+On transient HTTP errors, a valid `Retry-After` (integer seconds or an HTTP date)
+is a minimum wait, combined with our backoff. Invalid values fall back to backoff.
+A wait longer than the remaining request budget ends in a timeout rather than an
+early retry; cancellation clears the waiting timer. Errors expose the parsed
+hint as optional `retryAfterMs`. This follows [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after).
 
 A transient Savanna HTTP status takes precedence even when the body contains
 GraphQL `errors`. Other GraphQL errors, other 4xx responses, malformed successful

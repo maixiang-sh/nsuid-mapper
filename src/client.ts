@@ -1,4 +1,5 @@
 import { contextFor, mapInto, type NsuidMapping } from './mapping.ts';
+import { mergeHeaders } from './headers.ts';
 import { normalizeRegion, parseNsuid } from './ids.ts';
 import type {
   AppIdResolveResult,
@@ -158,6 +159,8 @@ export class NsuidMapper {
    * The upstream entry is batched and polymorphic, so a mixed list of titles,
    * DLC and bundles costs a single round trip and the caller does not have to
    * know the kinds up front.
+   * No client-side cap is imposed, but the upstream maximum is unknown.
+   * Split large lists into modest sequential batches, for example 100 IDs.
    *
    * Every nsuid asked for appears in the result. A `null` value means the kind
    * has no application id (bundle, demo, consumable) or the nsuid is not sold
@@ -192,7 +195,7 @@ export class NsuidMapper {
    * would multiply two fan-out dimensions into a burst; capped this way the
    * concurrent country count stays bounded and obvious.
    * Use {@link NsuidMapper.resolveNsuidsToAppIds} when you only need ids — that
-   * one *is* batched, because it stays a single request however many you pass.
+   * one batches the input in a single request, subject to upstream capacity.
    *
    * @example
    * ```ts
@@ -252,12 +255,4 @@ export class NsuidMapper {
       retries: options?.retries ?? this.retries,
     };
   }
-}
-
-function mergeHeaders(...sources: Array<Record<string, string> | undefined>): Headers {
-  const headers = new Headers();
-  for (const source of sources) {
-    for (const [name, value] of Object.entries(source ?? {})) headers.set(name, value);
-  }
-  return headers;
 }
