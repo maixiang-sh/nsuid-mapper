@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { NsuidMapper } from '../src/client.ts';
+import { mapInto } from '../src/mapping.ts';
 
 // Harvest Moon's verified US/GB base and Switch 2 Edition identities.
 const appId = '0100839022642000';
@@ -99,6 +100,31 @@ test('rejects missing source SKU evidence', async () => {
     (await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] })).targets[0]?.reason,
   ).toContain('insufficient');
 });
+
+for (const missing of ['platform', 'rights'] as const) {
+  test(`missing title ${missing} stops before any target request`, async () => {
+    let redirects = 0;
+    const r = await mapInto(
+      {
+        nsuid: usBase,
+        kind: 'title',
+        appId,
+        labelPlatform: missing === 'platform' ? undefined : 'HAC',
+        titleIds: missing === 'rights' ? [] : [appId],
+      },
+      'GB',
+      {
+        resolve: async () => {
+          redirects++;
+          throw new Error('Target network must not be called for an incomplete source');
+        },
+      },
+    );
+    expect(redirects).toBe(0);
+    expect(r.nsuid).toBeUndefined();
+    expect(r.reason).toContain('insufficient');
+  });
+}
 test('finds upgrade DLC through upgradeInfo even when dlcItems is empty', async () => {
   const client = new NsuidMapper({
     fetch: (async (_url, init) => {

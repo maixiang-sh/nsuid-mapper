@@ -5,6 +5,63 @@ import { fetchRelatedItems } from '../src/upstreams/savanna.ts';
 
 import { live } from './live-helper.ts';
 
+live(
+  'real redirector retries after one injected 503 and preserves both country results',
+  async () => {
+    let auAttempts = 0;
+    const client = new NsuidMapper({
+      timeoutMs: 15_000,
+      fetch: (async (url, init) => {
+        if (init?.method === 'GET' && String(url).endsWith('/AU')) {
+          if (++auAttempts === 1) return new Response(null, { status: 503 });
+        }
+        // Only the first AU error is synthetic; all successful responses are live.
+        return fetch(url, init);
+      }) as typeof fetch,
+    });
+    const r = await client.mapNsuid('70010000000707', { from: 'US', to: ['AU', 'US'] });
+    expect(r.targets.map((t) => t.nsuid)).toEqual(['70010000000706', '70010000000707']);
+    expect(auAttempts).toBe(2);
+  },
+  120_000,
+);
+
+live(
+  'real title preflight: missing rights in a live response prevent all target requests',
+  async () => {
+    let gets = 0;
+    const client = new NsuidMapper({
+      timeoutMs: 15_000,
+      fetch: (async (url, init) => {
+        if (init?.method === 'GET') gets++;
+        const response = await fetch(url, init);
+        const input = JSON.parse(String(init?.body)) as {
+          variables: { country: string };
+        };
+        if (input.variables.country === 'US') {
+          const body = (await response.json()) as {
+            data?: { item?: { itemsV2?: Array<{ nsUid: number; romRights: unknown[] }> } };
+          };
+          expect(response.ok).toBeTrue();
+          const source = body.data?.item?.itemsV2?.find((n) => n.nsUid === 70010000000707);
+          expect(source?.romRights.length).toBeGreaterThan(0);
+          // The product is real; missing rights are a deliberate fault injection.
+          source!.romRights = [];
+          return Response.json(body);
+        }
+        return response;
+      }) as typeof fetch,
+    });
+    const r = await client.mapNsuid('70010000000707', { from: 'US', to: ['AU', 'GB'] });
+    expect(gets).toBe(0);
+    for (const target of r.targets) {
+      expect(target.nsuid).toBeUndefined();
+      expect(target.reason).toContain('insufficient');
+    }
+  },
+  60_000,
+);
+
 for (const [id, typename] of [
   ['70020000000141', 'CatalogTicketItem'],
   ['70080000001243', 'NormalTicketItem'],

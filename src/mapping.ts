@@ -89,11 +89,11 @@ export async function mapInto(
 
   if (identity.kind === 'title') {
     if (!identity.appId) return { region: target, reason: identity.reason ?? 'no application id' };
-    const nsuid = await resolver.resolve(identity.appId, target, options);
-    if (!nsuid) return { region: target, reason: UNRESOLVED_NSUID_REASON };
     if (!identity.labelPlatform || !identity.titleIds?.length) {
       return { region: target, reason: 'Source title has insufficient SKU identity' };
     }
+    const nsuid = await resolver.resolve(identity.appId, target, options);
+    if (!nsuid) return { region: target, reason: UNRESOLVED_NSUID_REASON };
     const { country, language } = contextFor(target);
     const candidates = await fetchIdentities([nsuid], country, language, options);
     const linked = candidates.get(nsuid)?.upgradeNsuids?.filter((id) => id !== nsuid) ?? [];

@@ -41,9 +41,9 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Injectable for tests; defaults to the global. */
   fetch?: typeof globalThis.fetch;
-  /** Per-request timeout; Savanna retries share that request budget. Default: 10 seconds. */
+  /** Per-request timeout, including retries and backoff on either upstream. Default: 10 seconds. */
   timeoutMs?: number;
-  /** Extra Savanna attempts after the first. Default: 2; maximum: 5. */
+  /** Extra attempts after the first on either upstream. Default: 2; maximum: 5. */
   retries?: number;
 }
 

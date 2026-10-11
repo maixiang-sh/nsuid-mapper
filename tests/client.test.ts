@@ -170,6 +170,7 @@ describe('NsuidMapper (mocked)', () => {
   test('classifies redirector HTTP, network and caller-abort errors', async () => {
     for (const status of [400, 429, 503]) {
       const client = new NsuidMapper({
+        retries: 0,
         fetch: (async () => new Response(null, { status })) as unknown as typeof fetch,
       });
       const error = await client.resolveAppIdToNsuid(XCX_APP, 'JP').catch((e: unknown) => e);
@@ -177,6 +178,7 @@ describe('NsuidMapper (mocked)', () => {
       expect((error as NsuidMapError).retryable).toBe(status !== 400);
     }
     const client = new NsuidMapper({
+      retries: 0,
       fetch: (async () => {
         throw new TypeError('connection reset');
       }) as unknown as typeof fetch,

@@ -20,7 +20,7 @@ export interface NsuidMapperOptions {
   defaultEnumerateMax?: number;
   /** Timeout applied to each Nintendo request. Default: 10 seconds. */
   timeoutMs?: number;
-  /** Extra Savanna attempts after the first for network, 429 and 5xx failures. Default: 2. */
+  /** Extra attempts on either upstream for network, 429 and 5xx failures. Default: 2. */
   retries?: number;
 }
 

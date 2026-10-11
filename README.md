@@ -236,11 +236,21 @@ change independently without splitting this project into separate packages.
 
 ### Network resilience
 
-The small Savanna transport applies one total 10-second timeout budget and
-retries transient network failures, HTTP 429, and HTTP 5xx twice with exponential
-backoff and jitter. A transient HTTP status takes precedence even when the body
-contains GraphQL `errors`. Other GraphQL errors, other 4xx responses, malformed
-successful responses, timeouts, and caller cancellation are not retried.
+Savanna and the AppID Redirector share a small retry policy: transient network
+failures, HTTP 429 and HTTP 5xx get up to two extra attempts with exponential
+backoff and jitter. `retries` configures both upstreams, at construction or per
+call; `0` disables retries and the maximum is `5`. Every attempt and backoff
+shares one request's timeout budget, which defaults to 10 seconds. Caller
+cancellation interrupts backoff and an already cancelled redirector call makes
+no request.
+
+A transient Savanna HTTP status takes precedence even when the body contains
+GraphQL `errors`. Other GraphQL errors, other 4xx responses, malformed successful
+responses, timeouts, and caller cancellation are not retried. Redirector 200 /
+404 results and redirects without a usable product are not retried either;
+a redirect missing its Location is a non-retryable error. Redirector response
+bodies are released because only headers are needed.
+
 Successful responses require an object envelope and an object `data`; malformed
 envelopes return a `NsuidMapError` with `kind: 'response'`. This validates the
 GraphQL envelope, not every nested product field.
@@ -256,8 +266,8 @@ await mapper.resolveNsuidToAppId(nsuid, 'GB', {
 });
 ```
 
-`timeoutMs` can override both Savanna and redirector requests per call. Savanna
-attempts share the request's timeout budget; retries never silently multiply it.
+`timeoutMs` can override both Savanna and redirector requests per call. On either
+upstream, attempts share that request's timeout budget; retries never silently multiply it.
 A map can make multiple requests, so this is not a whole-map deadline. Pass an
 `AbortSignal` when the complete mapping operation needs one.
 
@@ -352,7 +362,9 @@ does not change the SDK's request timeout or automatic retry policy.
 ## SKU identity and upgrades
 
 `resolveAppIdToNsuid` still returns the redirector's default SKU (`acdIndex=0`).
-`mapNsuid` verifies the source and target platform and complete sorted title-right set.
+`mapNsuid` checks that the source has an application ID, platform and rights before
+requesting target countries. It verifies the source and target platform and complete
+sorted title-right set.
 It examines the default target plus the base/upgrade titles linked by `upgradeInfo`.
 It returns an unmapped result with a reason when the evidence is missing, no candidate
 fits, or several candidates match; it never substitutes the ordinary edition for a
@@ -370,8 +382,8 @@ non-searchable members, multi-right DLC, repeated members, ambiguous candidates
 and scan caps. Consumable fixtures cover The Crew's three editions, FC 26's nine
 US bundles with identical member counts, and NBA 2K26's different regional group
 IDs. Missing identities and exact `itemId` comparisons have regression coverage.
-Request tests cover HTTP errors envelopes, malformed JSON and
-per-call timeout overrides. Synthetic mutations are marked in tests. Live regressions verify
+Request tests cover HTTP errors envelopes, malformed JSON, redirector retry recovery /
+exhaustion, cancellation during backoff, source preflight and per-call timeout overrides. Synthetic mutations are marked in tests. Live regressions verify
 both correct mappings and explicit refusal when current upstream evidence is
 insufficient. Live assertions are dated observations; future catalog changes
 can require updating them after verification.

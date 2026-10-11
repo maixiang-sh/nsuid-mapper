@@ -12,6 +12,7 @@
  */
 
 import { NsuidMapError } from '../errors.ts';
+import { backoffDelay, normalizeRetries, waitForRetry } from '../retry.ts';
 import type { RequestOptions } from '../types.ts';
 
 export const SAVANNA_ENDPOINT = 'https://wb.lp1.savanna.srv.nintendo.net/graphql';
@@ -44,10 +45,6 @@ const HEADERS: Record<string, string> = {
 export const SHOP_ID = 3;
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_RETRIES = 2;
-const MAX_RETRIES = 5;
-const BASE_RETRY_DELAY_MS = 200;
-const MAX_RETRY_DELAY_MS = 2_000;
 
 /** Shared selection: retain non-searchable contents and every member's SKU evidence. */
 const BUNDLE_IDENTITY_FIELDS = `
@@ -362,7 +359,7 @@ export async function execute<T>(
 ): Promise<T> {
   const endpoint = options?.endpoint ?? SAVANNA_ENDPOINT;
   const timeoutMs = normalizePositiveInt(options?.timeoutMs, DEFAULT_TIMEOUT_MS, 120_000);
-  const retries = normalizeNonNegativeInt(options?.retries, DEFAULT_RETRIES, MAX_RETRIES);
+  const retries = normalizeRetries(options?.retries);
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const signal = options?.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
   const sleep =
@@ -541,38 +538,9 @@ function classifyAbort(
   });
 }
 
-function backoffDelay(attempt: number): number {
-  const capped = Math.min(BASE_RETRY_DELAY_MS * 2 ** attempt, MAX_RETRY_DELAY_MS);
-  return Math.round(capped * (0.5 + Math.random() * 0.5));
-}
-
-async function waitForRetry(
-  ms: number,
-  sleep: (ms: number) => Promise<void>,
-  signal: AbortSignal,
-): Promise<void> {
-  if (signal.aborted) throw signal.reason;
-  let onAbort: (() => void) | undefined;
-  const aborted = new Promise<never>((_resolve, reject) => {
-    onAbort = () => reject(signal.reason);
-    signal.addEventListener('abort', onAbort, { once: true });
-  });
-  try {
-    await Promise.race([sleep(ms), aborted]);
-  } finally {
-    if (onAbort) signal.removeEventListener('abort', onAbort);
-  }
-}
-
 function normalizePositiveInt(value: number | undefined, fallback: number, max: number): number {
   if (value == null) return fallback;
   if (!Number.isFinite(value) || value <= 0) throw new TypeError('timeoutMs must be positive');
-  return Math.min(Math.trunc(value), max);
-}
-
-function normalizeNonNegativeInt(value: number | undefined, fallback: number, max: number): number {
-  if (value == null) return fallback;
-  if (!Number.isFinite(value) || value < 0) throw new TypeError('retries must be non-negative');
   return Math.min(Math.trunc(value), max);
 }
 

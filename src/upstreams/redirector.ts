@@ -7,6 +7,7 @@ import {
   MAX_ENUMERATE_LIMIT,
 } from '../constants.ts';
 import { NsuidMapError } from '../errors.ts';
+import { backoffDelay, normalizeRetries, waitForRetry } from '../retry.ts';
 import {
   isCatalogId,
   itemKindFromNsuid,
@@ -59,6 +60,7 @@ interface AppIdRedirectorOptions {
   fetch?: typeof globalThis.fetch;
   defaultEnumerateMax?: number;
   timeoutMs?: number;
+  retries?: number;
 }
 
 /**
@@ -73,6 +75,7 @@ export class AppIdRedirector {
   private readonly fetchImpl: typeof globalThis.fetch;
   private readonly defaultEnumerateMax: number;
   private readonly timeoutMs: number;
+  private readonly retries: number;
 
   constructor(options: AppIdRedirectorOptions = {}) {
     this.baseUrl = (options.baseUrl ?? EC_BASE).replace(/\/$/, '');
@@ -82,6 +85,7 @@ export class AppIdRedirector {
       options.defaultEnumerateMax ?? DEFAULT_ENUMERATE_MAX,
     );
     this.timeoutMs = parseTimeoutMs(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    this.retries = normalizeRetries(options.retries);
   }
 
   buildUrl(appId: string, region: string, acdIndex?: number): string {
@@ -98,6 +102,7 @@ export class AppIdRedirector {
     const acdIndex = parseAcdIndex(options.acdIndex);
     const url = this.buildUrl(id, reg, acdIndex);
     const timeoutMs = parseTimeoutMs(options.timeoutMs ?? this.timeoutMs);
+    const retries = normalizeRetries(options.retries ?? this.retries);
     const timeoutController = new AbortController();
     const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
     const signal = options.signal
@@ -105,58 +110,62 @@ export class AppIdRedirector {
       : timeoutController.signal;
     const fetchImpl = options.fetch ?? this.fetchImpl;
 
-    try {
-      const res = await fetchImpl(url, {
-        method: 'GET',
-        redirect: 'manual',
-        signal,
-        headers: mergeHeaders(DEFAULT_HEADERS, this.customHeaders, options.headers),
-      });
+    const headers = mergeHeaders(DEFAULT_HEADERS, this.customHeaders, options.headers);
+    const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-      if (res.status === 404) return null;
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get('location') ?? res.headers.get('Location');
-        if (!location) {
-          throw new NsuidMapError(`Redirect without Location: ${url}`, {
-            status: res.status,
-            url,
-          });
+    try {
+      // All attempts and backoff share this request's timeout and caller signal.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          if (signal.aborted) throw signal.reason;
+          const res = await fetchImpl(url, { method: 'GET', redirect: 'manual', signal, headers });
+          try {
+            if (res.status === 404) return null;
+            if (res.status >= 300 && res.status < 400) {
+              const location = res.headers.get('location');
+              if (!location) {
+                throw new NsuidMapError(`Redirect without Location: ${url}`, {
+                  status: res.status,
+                  url,
+                });
+              }
+              return parseResolveResult({
+                appId: id,
+                region: reg,
+                acdIndex,
+                location,
+                baseUrl: this.baseUrl,
+              });
+            }
+            if (res.status === 200) return null;
+            throw new NsuidMapError(`Unexpected status ${res.status} for AppID resolve: ${url}`, {
+              status: res.status,
+              url,
+              kind: 'http',
+              retryable: res.status === 429 || res.status >= 500,
+            });
+          } finally {
+            // Only headers are needed. Release bodies before retrying or returning.
+            void res.body?.cancel().catch(() => {});
+          }
+        } catch (cause) {
+          if (signal.aborted) throw classifyAbort(url, options.signal, timeoutMs, cause);
+          const error =
+            cause instanceof NsuidMapError
+              ? cause
+              : new NsuidMapError(
+                  `AppID resolve failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+                  { url, cause, kind: 'network', retryable: true },
+                );
+          if (!error.retryable || attempt >= retries) throw error;
+          try {
+            await waitForRetry(backoffDelay(attempt), sleep, signal);
+          } catch (waitError) {
+            if (signal.aborted) throw classifyAbort(url, options.signal, timeoutMs, waitError);
+            throw waitError;
+          }
         }
-        return parseResolveResult({
-          appId: id,
-          region: reg,
-          acdIndex,
-          location,
-          baseUrl: this.baseUrl,
-        });
       }
-      if (res.status === 200) return null;
-      throw new NsuidMapError(`Unexpected status ${res.status} for AppID resolve: ${url}`, {
-        status: res.status,
-        url,
-        kind: 'http',
-        retryable: res.status === 429 || res.status >= 500,
-      });
-    } catch (error) {
-      if (error instanceof NsuidMapError) throw error;
-      if (options.signal?.aborted) {
-        throw new NsuidMapError(`AppID resolve aborted by caller: ${url}`, {
-          url,
-          cause: error,
-          kind: 'abort',
-        });
-      }
-      if (timeoutController.signal.aborted) {
-        throw new NsuidMapError(`AppID resolve timed out after ${timeoutMs}ms: ${url}`, {
-          url,
-          cause: error,
-          kind: 'timeout',
-        });
-      }
-      throw new NsuidMapError(
-        `AppID resolve failed: ${error instanceof Error ? error.message : String(error)}`,
-        { url, cause: error, kind: 'network', retryable: true },
-      );
     } finally {
       clearTimeout(timer);
     }
@@ -249,6 +258,21 @@ export function parseStorefrontPath(location: string): {
     pathKind: pathKindFromSegment(match[3]),
     nsuid: match[4],
   };
+}
+
+function classifyAbort(
+  url: string,
+  callerSignal: AbortSignal | undefined,
+  timeoutMs: number,
+  cause: unknown,
+): NsuidMapError {
+  const abortedByCaller = callerSignal?.aborted;
+  return new NsuidMapError(
+    abortedByCaller
+      ? `AppID resolve aborted by caller: ${url}`
+      : `AppID resolve timed out after ${timeoutMs}ms: ${url}`,
+    { url, cause, kind: abortedByCaller ? 'abort' : 'timeout' },
+  );
 }
 
 function parseTimeoutMs(value: number): number {

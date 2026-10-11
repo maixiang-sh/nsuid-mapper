@@ -8,6 +8,7 @@
 - `src/mapping.ts`：本体、DLC、合集的匹配决策。
 - `src/upstreams/savanna.ts`：必要的 GraphQL 查询、身份标准化和关联项分页。
 - `src/upstreams/redirector.ts`：Nintendo Apps Redirector 请求和跳转解析。
+- `src/retry.ts`：两个上游共用的重试次数校验、指数退避和可取消等待；不增加公开导出。
 
 输入一个 NSUID、源国家和最多 8 个目标国家，返回源身份和每个目标国家的 `nsuid` 或未映射 `reason`。不比较名称、发行商名称或文案相似度。
 
@@ -22,7 +23,7 @@ NSUID 是地区商品编号；Application ID 是内容锚点，但不能单独�
 
 ## 本体与 DLC
 
-**本体**：从源商品读取 AppID、`labelPlatform` 和全部 `romRights.titleId`。Redirector 返回的商品只是入口，继续读取它及 `upgradeInfo` 关联的基础版 / 升级版身份。只有 AppID、平台、完整权益集合都一致且仅有一个候选时才返回映射。
+**本体**：从源商品读取 AppID、`labelPlatform` 和全部 `romRights.titleId`，先检查证据是否齐全；缺失时直接返回原因，不发起目标国家请求。Redirector 返回的商品只是入口，继续读取它及 `upgradeInfo` 关联的基础版 / 升级版身份。只有 AppID、平台、完整权益集合都一致且仅有一个候选时才返回映射。
 
 **DLC**：读取平台与全部 `romRights.titleId`，对所有权益推导父应用编号并去重。解析目标父商品，分页读取其 DLC 列表及首页的 `upgradeInfo.upgradeDlcItem`，比较平台与完整权益集合。相同 NSUID 在两条路径重复出现时只算一个候选；不同 NSUID 都匹配时返回歧义原因。权益顺序、大小写和重复 ID 不影响比较。扫描未完成时，不接受此前找到的候选。
 
@@ -88,9 +89,10 @@ DLC 也限制最多 16 个父应用候选，通常所有权益只指向同一个
 - Demo / Consumable 独立商品没有本库用于发现目标父商品的应用编号，返回原因。消耗品 `itemId` 可用于合集内成员匹配，但没有按 `itemId` 查询其他地区商品的入口。
 - 身份查询在 `itemsV2` 公共层选择 `__typename`、`nsUid`。已存在但不支持映射的兑换券 / 课程券返回 `kind: 'unknown'` 和包含实际类型名的原因，不再误报商品未找到。未由 `itemsV2` 返回的订阅券仍无法识别。
 - 上游请求失败通过 `NsuidMapError` 抛出；业务上的未映射通过 `reason` 返回。单个国家出现硬错误仍会使本次调用拒绝，没有改为部分成功协议。
-- 每次 Savanna 请求默认总超时 10 秒，最多额外重试 2 次；429 / 5xx 即使带 GraphQL `errors` 也按 HTTP 暂时失败处理。其他 GraphQL 错误、4xx、异常成功响应、超时和调用方取消不重试。
+- Savanna 和 Redirector 默认单次请求总超时 10 秒，最多额外重试 2 次。`retries` 同时控制两个上游，支持构造默认值与单次调用覆盖，`0` 禁用，上限为 `5`。网络错误、429 / 5xx 采用指数退避和抖动；调用方取消可打断等待。
+- Savanna 的 429 / 5xx 即使带 GraphQL `errors` 也按 HTTP 暂时失败处理。其他 GraphQL 错误、其他 4xx、异常成功响应、超时和调用方取消不重试。Redirector 的 200 / 404、没有商品的跳转不重试，缺少 Location 的跳转直接报错；只使用响应头，主动释放响应体。
 - HTTP 200 的 JSON 外层及 `data` 必须为对象，`errors` 若存在必须为对象数组。异常返回 `NsuidMapError(kind: 'response')`，不会抛普通空对象访问错误；此处不进行完整商品 schema 校验。
-- 单次 `timeoutMs` 同时覆盖 Savanna 和 Redirector；Savanna 重试共享该请求的预算。多步映射的总时长可能更长，调用方可传入 `AbortSignal` 控制整个操作。
+- 单次 `timeoutMs` 同时覆盖 Savanna 和 Redirector；两个上游的重试及退避都共享各自请求的预算。多步映射的总时长可能更长，调用方可传入 `AbortSignal` 控制整个操作。
 
 若调用方自行缓存映射结果，升级这次匹配规则后应清除旧 DLC / 合集结果或变更缓存版本，避免继续使用此前的错误映射。本库没有缓存可自动清除。
 
