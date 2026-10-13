@@ -1,10 +1,10 @@
-# @nintendo-store/nsuid-mapper
+# nsuid-mapper
 
 [中文说明](README.zh-CN.md) · [Technical design](docs/technical-design.zh-CN.md) · [Redirector protocol](docs/apps-redirector.md)
 
 Map a Nintendo eShop NSUID to the same product in other countries. This independent
 Bun + TypeScript library uses public Nintendo endpoints and has no runtime dependencies.
-It is not an official Nintendo SDK.
+It is an unofficial tool, not a Nintendo SDK, and is not affiliated with or endorsed by Nintendo.
 
 ## Getting started
 
@@ -29,7 +29,7 @@ console.log(result.targets);
 // Each target contains region and either nsuid or an unmapped reason.
 ```
 
-In a consuming project, use the package name `@nintendo-store/nsuid-mapper`
+In a consuming project, use the package name `nsuid-mapper`
 after adding the built checkout as a local dependency. No npm publication is required.
 
 ## Mapping and limits

@@ -16,7 +16,7 @@
  *
  * @example
  * ```ts
- * import { NsuidMapper } from '@nintendo-store/nsuid-mapper';
+ * import { NsuidMapper } from 'nsuid-mapper';
  *
  * const mapper = new NsuidMapper();
  * const r = await mapper.mapNsuid('70010000095202', {

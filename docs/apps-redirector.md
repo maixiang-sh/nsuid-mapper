@@ -16,7 +16,7 @@ observations are maintained in [the technical design](technical-design.zh-CN.md)
 | `acdIndex` | Optional non-negative safe integer, default 0; selects a candidate SKU |
 
 ```ts
-import { buildAppIdUrl, NsuidMapper } from '@nintendo-store/nsuid-mapper';
+import { buildAppIdUrl, NsuidMapper } from 'nsuid-mapper';
 
 buildAppIdUrl('0100453019aa8000', 'JP', { acdIndex: 1 });
 // https://ec.nintendo.com/apps/0100453019aa8000/JP?acdIndex=1
@@ -81,7 +81,7 @@ For DLC IDs in the AOC allocation range, derive the parent application by cleari
 the low 13 bits, then discover and compare the target parent's DLC candidates:
 
 ```ts
-import { deriveBaseApplicationIdFromDlcAppId } from '@nintendo-store/nsuid-mapper';
+import { deriveBaseApplicationIdFromDlcAppId } from 'nsuid-mapper';
 
 const parent = deriveBaseApplicationIdFromDlcAppId('0100616025b6d002');
 // 0100616025b6c000

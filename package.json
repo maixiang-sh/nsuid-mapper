@@ -1,5 +1,5 @@
 {
-  "name": "@nintendo-store/nsuid-mapper",
+  "name": "nsuid-mapper",
   "version": "0.1.0",
   "packageManager": "bun@1.4.3",
   "private": true,

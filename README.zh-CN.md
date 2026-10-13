@@ -4,7 +4,7 @@
 
 [English](README.md) · [技术设计](docs/technical-design.zh-CN.md) · [Redirector 行为](docs/apps-redirector.md)
 
-这是独立的 Bun + TypeScript 项目，没有运行时第三方依赖。不需要发布到 npm；克隆后即可开发、运行示例和构建。
+这是独立的 Bun + TypeScript 项目，没有运行时第三方依赖。本项目是非官方工具，与任天堂没有关联，也未获其认可。不需要发布到 npm；克隆后即可开发、运行示例和构建。
 
 开发工具固定 Bun `1.4.3`、TypeScript `7.0.2`，为 2026-10-11 核实的最新正式版，不使用 canary / nightly。
 
