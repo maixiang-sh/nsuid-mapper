@@ -6,17 +6,18 @@
  * 16-hex application id into that region's store URL — and the URL carries the
  * region's nsuid.
  *
- * Three kinds map, each anchored on an id upstream itself provides:
+ * Four kinds map, each anchored on an id upstream itself provides:
  *
- * | kind   | identity                         | target candidates                   |
- * | ------ | -------------------------------- | ----------------------------------- |
- * | title  | appId, platform and full rights   | redirector plus linked title SKUs    |
- * | dlc    | platform and full rights         | parent's DLC and upgrade list       |
- * | bundle | platform, rights and all members | all linked parents, unique SKU      |
+ * | kind   | identity                          | target candidates                   |
+ * | ------ | --------------------------------- | ----------------------------------- |
+ * | title  | appId, platform and full rights   | redirector plus linked title SKUs   |
+ * | dlc    | platform and full rights          | parent's DLC and upgrade list       |
+ * | bundle | platform, rights and all members  | all linked parents, unique SKU      |
+ * | demo   | parent title, platform, sole demo | the mapped parent title's demo list |
  *
- * Nothing here matches on names. `demo` and `consumable` carry no application
- * id at all, so they are reported unmapped rather than guessed at — a wrong
- * nsuid is worse than an honest null.
+ * Nothing here matches on names. A `consumable` carries no application id and
+ * no title lists it, so it is reported unmapped rather than guessed at — a
+ * wrong nsuid is worse than an honest null.
  */
 
 import { getCountryLanguageInfo } from './catalogs.ts';
@@ -72,41 +73,12 @@ export async function mapInto(
   const target = normalizeRegion(region);
 
   if (identity.kind === 'title') {
-    if (!identity.appId) return { region: target, reason: identity.reason ?? 'no application id' };
-    if (!identity.labelPlatform || !identity.titleIds?.length) {
-      return { region: target, reason: 'Source title has insufficient SKU identity' };
-    }
-    const nsuid = await resolver.resolve(identity.appId, target, options);
-    if (!nsuid) return { region: target, reason: UNRESOLVED_NSUID_REASON };
-    const { country, language } = contextFor(target);
-    const candidates = await fetchIdentities([nsuid], country, language, options);
-    const linked = candidates.get(nsuid)?.upgradeNsuids?.filter((id) => id !== nsuid) ?? [];
-    if (linked.length) {
-      for (const [id, candidate] of await fetchIdentities(linked, country, language, options)) {
-        candidates.set(id, candidate);
-      }
-    }
-    if (![...candidates.values()].some((candidate) => candidate.kind === 'title')) {
-      return {
-        region: target,
-        reason: 'No title identity was returned for the resolved target NSUID',
-      };
-    }
-    const matches = [...candidates.values()].filter(
-      (candidate) =>
-        candidate.kind === 'title' &&
-        candidate.appId?.toLowerCase() === identity.appId?.toLowerCase() &&
-        candidate.labelPlatform === identity.labelPlatform &&
-        sameSet(candidate.titleIds, identity.titleIds!),
-    );
-    if (matches.length === 1) return { region: target, nsuid: matches[0]!.nsuid };
-    return {
-      region: target,
-      reason:
-        matches.length > 1
-          ? 'Ambiguous title SKU: multiple candidates match the source platform and rights'
-          : 'No title SKU matches the source platform and rights',
-    };
+    const mapped = await mapTitle(identity, target, resolver, options);
+    return mapped.title ? { region: target, nsuid: mapped.title.nsuid } : mapped;
+  }
+
+  if (identity.kind === 'demo' && identity.parentTitles) {
+    return mapDemo(identity, target, resolver, options);
   }
 
   if (identity.kind === 'dlc') {
@@ -119,6 +91,100 @@ export async function mapInto(
   }
 
   return { region: target, reason: identity.reason ?? `${identity.kind} cannot be mapped` };
+}
+
+/** The matching target title keeps its identity so a demo can read the title's demo list. */
+async function mapTitle(
+  identity: Identity,
+  target: string,
+  resolver: AppIdResolver,
+  options?: RequestOptions,
+): Promise<RegionMapping & { title?: Identity }> {
+  if (!identity.appId) return { region: target, reason: identity.reason ?? 'no application id' };
+  if (!identity.labelPlatform || !identity.titleIds?.length) {
+    return { region: target, reason: 'Source title has insufficient SKU identity' };
+  }
+  const nsuid = await resolver.resolve(identity.appId, target, options);
+  if (!nsuid) return { region: target, reason: UNRESOLVED_NSUID_REASON };
+  const { country, language } = contextFor(target);
+  const candidates = await fetchIdentities([nsuid], country, language, options);
+  const linked = candidates.get(nsuid)?.upgradeNsuids?.filter((id) => id !== nsuid) ?? [];
+  if (linked.length) {
+    for (const [id, candidate] of await fetchIdentities(linked, country, language, options)) {
+      candidates.set(id, candidate);
+    }
+  }
+  if (![...candidates.values()].some((candidate) => candidate.kind === 'title')) {
+    return {
+      region: target,
+      reason: 'No title identity was returned for the resolved target NSUID',
+    };
+  }
+  const matches = [...candidates.values()].filter(
+    (candidate) =>
+      candidate.kind === 'title' &&
+      candidate.appId?.toLowerCase() === identity.appId?.toLowerCase() &&
+      candidate.labelPlatform === identity.labelPlatform &&
+      sameSet(candidate.titleIds, identity.titleIds!),
+  );
+  if (matches.length === 1) return { region: target, title: matches[0] };
+  return {
+    region: target,
+    reason:
+      matches.length > 1
+        ? 'Ambiguous title SKU: multiple candidates match the source platform and rights'
+        : 'No title SKU matches the source platform and rights',
+  };
+}
+
+/**
+ * A demo has no application id or rights, so its evidence is its parent title's
+ * full identity plus being that title's only demo on the platform — on both
+ * sides. A title with two same-platform demos in either region stays unmapped:
+ * nothing public tells them apart.
+ */
+async function mapDemo(
+  source: Identity,
+  region: string,
+  resolver: AppIdResolver,
+  options?: RequestOptions,
+): Promise<RegionMapping> {
+  const onPlatform = (title: Identity) =>
+    (title.demos ?? []).filter((demo) => demo.labelPlatform === source.labelPlatform);
+  const parents = source.parentTitles!.slice(0, MAX_PARENT_TITLES);
+  if (parents.some((parent) => onPlatform(parent).length !== 1)) {
+    return {
+      region,
+      reason:
+        'Ambiguous demo: the source title does not list exactly one demo on this platform; the available identity fields cannot distinguish them',
+    };
+  }
+  const found = new Set<string>();
+  let reason: string | undefined;
+  for (const parent of parents) {
+    const mapped = await mapTitle(parent, region, resolver, options);
+    if (!mapped.title) {
+      reason ??= mapped.reason;
+      continue;
+    }
+    const demos = onPlatform(mapped.title);
+    if (demos.length > 1) {
+      return {
+        region,
+        reason:
+          'Ambiguous demo: the target title lists multiple demos on this platform; the available identity fields cannot distinguish them',
+      };
+    }
+    if (demos[0]) found.add(demos[0].nsuid);
+    else reason ??= 'The target title lists no demo on the source platform';
+  }
+  if (found.size === 1) return { region, nsuid: [...found][0] };
+  return {
+    region,
+    reason: found.size
+      ? 'Ambiguous demo: parent titles lead to different target demos'
+      : (reason ?? UNRESOLVED_NSUID_REASON),
+  };
 }
 
 /** Bound distinct parent candidates and upstream upgrade links. */

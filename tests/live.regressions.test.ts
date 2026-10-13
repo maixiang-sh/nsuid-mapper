@@ -184,12 +184,13 @@ const bundleCases = [
   ['70070000039410', 'US', 'JP', '70070000039562'], // Its Switch base bundle
   ['70070000039564', 'JP', 'US', '70070000039411'], // Reverse Edition mapping
   ['70070000040636', 'US', 'GB', '70070000040633'], // Woodo Switch 2 bundle
-  ['70070000028930', 'US', 'GB', '70070000028985'], // Just Dance: three months
-  ['70070000028931', 'US', 'GB', '70070000028984'], // Just Dance: twelve months
+  ['70070000028985', 'GB', 'US', '70070000028930'], // Just Dance: three months
+  ['70070000028984', 'GB', 'US', '70070000028931'], // Just Dance: twelve months
   ['70070000028930', 'US', 'US', '70070000028930'], // Must not select Ultimate
   ['70070000013653', 'US', 'GB', '70070000013654'], // Sunbreak: multi-right DLC kit
   ['70070000027900', 'US', 'GB', '70070000028364'], // WWE Deadman
   ['70070000015109', 'US', 'GB', '70070000015108'], // Miku DLC bundle
+  ['70070000040300', 'US', 'GB', '70070000040301'], // Sonic: member rights present since 2026-10-14
 ] as const;
 for (const [id, from, to, expected] of bundleCases) {
   live(
@@ -203,21 +204,20 @@ for (const [id, from, to, expected] of bundleCases) {
   );
 }
 
-const incompleteBundles = [
-  ['70070000040300', 'insufficient'], // Sonic: a member currently has no ROM rights
-] as const;
-for (const [id, reason] of incompleteBundles) {
+// The GB Just Dance bundles became NOT_SALE and UNSEARCHABLE by 2026-10-14. Their identities
+// still equal the US ones, but parent listings cannot filter for NOT_SALE.
+for (const id of ['70070000028930', '70070000028931']) {
   live(
-    `incomplete bundle identity stays unmapped: ${id}`,
+    `a delisted target bundle is not discoverable: ${id} US → GB`,
     async () => {
       const result = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid(id, {
         from: 'US',
         to: ['GB'],
       });
       expect(result.targets[0]?.nsuid).toBeUndefined();
-      expect(result.targets[0]?.reason).toContain(reason);
+      expect(result.targets[0]?.reason).toContain('No bundle SKU matches');
     },
-    60_000,
+    120_000,
   );
 }
 
@@ -516,7 +516,6 @@ for (const [id, from, expected] of [
 }
 
 for (const [id, from, kind, reason] of [
-  ['70030000025288', 'US', 'demo', 'no application id for demos'],
   ['70030000025288', 'AU', 'unknown', 'source NSUID was not returned'],
   ['70090000040108', 'AU', 'consumable', 'no application id for consumables'],
   ['70090000040109', 'AU', 'consumable', 'no application id for consumables'],
@@ -548,5 +547,44 @@ for (const [id, from, kind, reason] of [
       }
     },
     60_000,
+  );
+}
+
+// Demo targets checked against live names on 2026-10-14; a demo's only anchor is its title.
+for (const [id, from, expected] of [
+  [
+    '70030000025288', // Star Fox, BEE
+    'US',
+    { JP: '70030000025308', GB: '70030000025302', AU: '70030000025302', HK: '70030000025297' },
+  ],
+  [
+    '70030000025302',
+    'AU',
+    { JP: '70030000025308', US: '70030000025288', GB: '70030000025302', HK: '70030000025297' },
+  ],
+  [
+    '70030000019929', // Pikmin 4, HAC
+    'US',
+    { JP: '70030000020003', GB: '70030000020101', AU: '70030000020101', HK: '70030000020033' },
+  ],
+  [
+    '70030000002605', // ARMS: the HK title currently lists no demo
+    'AU',
+    { JP: '70030000003221', US: '70030000002523', GB: '70030000002605', HK: null },
+  ],
+] as const) {
+  live(
+    `demo maps through its parent title: ${id} from ${from}`,
+    async () => {
+      const r = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid(id, {
+        from,
+        to: Object.keys(expected),
+      });
+      expect(r.source.kind).toBe('demo');
+      expect(Object.fromEntries(r.targets.map((t) => [t.region, t.nsuid ?? null]))).toEqual(
+        expected,
+      );
+    },
+    120_000,
   );
 }

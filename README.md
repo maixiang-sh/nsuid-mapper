@@ -39,12 +39,18 @@ after adding the built checkout as a local dependency. No npm publication is req
 | Title `7001`  | Application ID, platform and complete ROM rights, including linked edition candidates |
 | DLC `7005`    | Platform and complete rights; candidates come from the parent DLC and upgrade lists   |
 | Bundle `7007` | Platform, complete rights and every member's identity, including repeated members     |
+| Demo `7003`   | Its parent title's identity and platform; the title must list exactly one such demo   |
 
 Consumable bundle members use their exact `itemId` and publisher ID. Names and
 localized descriptions do not participate in matching.
 
-Standalone demos `7003` and consumables `7009` have no supported target discovery
-path. Catalog tickets `7002` and normal tickets `7008` are recognized but not mapped.
+A demo has no application ID or rights of its own. It maps through the titles
+upstream lists as its parents: each parent is mapped as a title, and the target
+title's demo list supplies the candidate. The source and target titles must each
+list exactly one demo on the demo's platform; otherwise the result is ambiguous.
+This is weaker evidence than rights, and it is the only public evidence there is.
+
+Standalone consumables `7009` have no supported target discovery path. Catalog tickets `7002` and normal tickets `7008` are recognized but not mapped.
 Missing identity evidence, ambiguous candidates and incomplete scans return a reason.
 Regional builds with different application IDs cannot be joined without an upstream link.
 A missing redirect does not establish that a product is unavailable in that country.

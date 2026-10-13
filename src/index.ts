@@ -9,7 +9,8 @@
  *    whose `Location` carries that region's nsuid.
  *
  * Titles, DLC and bundles verify platform and complete rights for SKU identity.
- * Standalone demos and consumables lack an application anchor for target
+ * Demos have neither; they map through their parent title when it lists exactly
+ * one demo on the platform. Standalone consumables lack any anchor for target
  * discovery and remain unmapped. Consumable members can participate in bundle
  * identity using their itemId and publisher ID.
  *

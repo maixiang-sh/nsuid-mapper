@@ -187,8 +187,8 @@ export class NsuidMapper {
    * Map one nsuid into other regions.
    *
    * Works for `title`, `dlc` and `bundle`, each anchored on an id upstream
-   * provides. A `demo` or `consumable` comes back with every target unmapped
-   * and a reason — they lack an application anchor for target discovery.
+   * provides, and for a `demo` through its parent title. A `consumable` comes
+   * back with every target unmapped and a reason — nothing lists it under a title.
    * Consumable itemId is used for bundle members, not standalone mapping.
    *
    * One nsuid per call, by design. Target countries fire together, so a batch

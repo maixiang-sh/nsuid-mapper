@@ -12,7 +12,7 @@
  * and a demo under one application id — every path this package has, on one
  * game, so a failure points at the path rather than at a quirk of some title.
  *
- * Verified 2026-07-23.
+ * Verified 2026-07-23; demo targets 2026-10-14.
  */
 import { describe, expect } from 'bun:test';
 import { NsuidMapper } from '../src/index.ts';
@@ -33,6 +33,7 @@ const EXPECTED = {
   title: { US: '70010000095203', GB: '70010000095204', HK: '70010000095206' },
   dlc: { US: '70050000056472', GB: '70050000056271', HK: '70050000056851' },
   bundle: { US: '70070000036289', GB: '70070000036287', HK: '70070000036281' },
+  demo: { US: '70030000023157', GB: '70030000023158', HK: '70030000023161' },
 } as const;
 
 const REGIONS = ['US', 'GB', 'HK'];
@@ -90,6 +91,19 @@ describe('mapping a bundle', () => {
   );
 
   live(
+    'a demo maps through its parent title, not by name',
+    async () => {
+      // Upstream exposes no application id for demos; the title relation is the anchor.
+      const r = await client().mapNsuid(JP.demo, { from: 'JP', to: REGIONS });
+
+      expect(r.source.kind).toBe('demo');
+      expect(r.source.parentTitles?.map((t) => t.nsuid)).toEqual([JP.title]);
+      expect(byRegion(r.targets)).toEqual(EXPECTED.demo);
+    },
+    120_000,
+  );
+
+  live(
     'bundle parent anchors are sorted and unique',
     async () => {
       const r = await client().mapNsuid(JP.bundle, { from: 'JP', to: ['US'] });
@@ -102,22 +116,6 @@ describe('mapping a bundle', () => {
 });
 
 describe('what cannot be mapped', () => {
-  live(
-    'a demo says why rather than guessing',
-    async () => {
-      // Upstream exposes no application id for demos. Matching one by name
-      // would return a plausible wrong nsuid, which is worse than nothing.
-      const r = await client().mapNsuid(JP.demo, { from: 'JP', to: REGIONS });
-
-      expect(r.source.kind).toBe('demo');
-      for (const target of r.targets) {
-        expect(target.nsuid).toBeUndefined();
-        expect(target.reason).toContain('no application id');
-      }
-    },
-    60_000,
-  );
-
   live(
     'KR and TW report the redirector limitation, not an empty result',
     async () => {

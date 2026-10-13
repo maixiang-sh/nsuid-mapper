@@ -42,7 +42,7 @@ console.log('\n── missing app ──');
 console.log(await client.resolveAppIdToNsuid('0000000000000000', 'JP'));
 
 console.log('\n── nsuid → nsuid, one call per kind ──');
-// Street Fighter 6: title, one of its DLC, and a bundle of DLC. The three take
+// Street Fighter 6: title, one of its DLC, a bundle of DLC and its demo. They take
 // different routes internally but the caller does not need to know which.
 // Target countries run concurrently; pagination and related editions add requests.
 const mapped = [];
@@ -58,10 +58,9 @@ for (const m of mapped) {
 }
 
 console.log('\n── what cannot be mapped, and why ──');
-// A demo carries no application id upstream, so there is nothing to anchor on.
-// It reports that rather than guessing from the title's name.
-const demo = mapped.find((m) => m.source.kind === 'demo');
-console.log('demo reason:', demo?.targets[0]?.reason);
+// KR is served by Savanna but not by the redirector, so every kind reports a reason there.
+const kr = mapped[0]?.targets.find((t) => t.region === 'KR');
+console.log('KR reason:', kr?.reason);
 
 console.log('\n── caller-written selection: only the fields you need ──');
 // Select the product fields you need after mapping the regional NSUIDs.

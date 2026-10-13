@@ -60,6 +60,21 @@ const BUNDLE_IDENTITY_FIELDS = `
 `;
 
 /**
+ * A title's SKU identity, upgrade links and demos.
+ *
+ * Demos expose no application id or rights; the title relation is their only anchor.
+ * `targetApplicationItems` rejects the query without `salesStatuses`.
+ */
+const TITLE_IDENTITY_FIELDS = `
+  applications { id } labelPlatform romRights { titleId }
+  upgradeInfo {
+    baseApplicationItem { nsUid }
+    upgradeApplicationItem { nsUid }
+  }
+  demoItems { nsUid labelPlatform }
+`;
+
+/**
  * One batch query covering every kind this package can map.
  *
  * `itemsV2` is polymorphic, so a mixed list of titles, DLC and bundles resolves
@@ -76,15 +91,15 @@ query NsuidMapIdentity($shopId: Int!, $country: CountryCode!, $language: Languag
   item {
     itemsV2(nsUids: $nsUids) {
       __typename nsUid
-      ... on ApplicationItem {
-        applications { id } labelPlatform romRights { titleId }
-        upgradeInfo {
-          baseApplicationItem { nsUid }
-          upgradeApplicationItem { nsUid }
-        }
-      }
+      ... on ApplicationItem { ${TITLE_IDENTITY_FIELDS} }
       ... on DlcItem { labelPlatform romRights { titleId } }
       ... on BundleItem { ${BUNDLE_IDENTITY_FIELDS} }
+      ... on DemoItem {
+        labelPlatform
+        targetApplicationItems(salesStatuses: [ONSALE, PRE_ORDER, SALES_TERMINATION, UNRELEASED]) {
+          nsUid ${TITLE_IDENTITY_FIELDS}
+        }
+      }
     }
   }
 }
@@ -160,6 +175,10 @@ export interface Identity {
   contentAppIds?: string[];
   /** Sorted typed member signatures, including consumable itemId; retain duplicates. */
   contentKeys?: string[];
+  /** Title only: the demos upstream lists under it. */
+  demos?: Array<{ nsuid: string; labelPlatform?: string }>;
+  /** Demo only: the titles upstream says it belongs to, in the demo's own region. */
+  parentTitles?: Identity[];
   /** Why this nsuid cannot be mapped, when it cannot. */
   reason?: string;
 }
@@ -177,6 +196,8 @@ interface RawNode {
     upgradeApplicationItem?: { nsUid?: string | number } | null;
   }>;
   itemsV2?: Array<{ item?: RawNode }>;
+  demoItems?: Array<{ nsUid?: string | number; labelPlatform?: string } | null> | null;
+  targetApplicationItems?: Array<RawNode | null> | null;
 }
 
 /** Resolve identity for a batch of nsuids in their own region's context. */
@@ -245,6 +266,9 @@ function toIdentity(node: RawNode): Identity {
             labelPlatform: node.labelPlatform,
             titleIds,
             upgradeNsuids,
+            demos: (node.demoItems ?? []).flatMap((demo) =>
+              demo?.nsUid ? [{ nsuid: String(demo.nsUid), labelPlatform: demo.labelPlatform }] : [],
+            ),
           }
         : { nsuid, kind: 'title', reason: 'upstream returned no application id' };
     }
@@ -318,8 +342,14 @@ function toIdentity(node: RawNode): Identity {
       }
       return { ...identity, contentKeys: contentKeys.sort() };
     }
-    case 'DemoItem':
-      return { nsuid, kind: 'demo', reason: 'upstream exposes no application id for demos' };
+    case 'DemoItem': {
+      const parentTitles = (node.targetApplicationItems ?? []).flatMap((title) =>
+        title?.nsUid ? [toIdentity({ ...title, __typename: 'ApplicationItem' })] : [],
+      );
+      return node.labelPlatform && parentTitles.length
+        ? { nsuid, kind: 'demo', labelPlatform: node.labelPlatform, parentTitles }
+        : { nsuid, kind: 'demo', reason: 'upstream returned no platform or parent title for demo' };
+    }
     case 'ConsumableItemV2':
       return {
         nsuid,
