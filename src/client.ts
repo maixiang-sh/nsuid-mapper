@@ -29,7 +29,7 @@ export interface NsuidMapperOptions {
  * Most countries accepted in one `to` list.
  *
  * A map fans out per country and all countries fire at once. A normal bundle
- * normally costs three requests per country; linked editions, multiple parents
+ * normally costs two requests per country; linked editions, multiple parents
  * and pagination add requests, performed sequentially within each country. Eight
  * keeps the concurrent fan-out bounded and is enough for one country per
  * publishing region (JPN USA EUR AUS TWN KOR CHN SEA). Split a longer list into

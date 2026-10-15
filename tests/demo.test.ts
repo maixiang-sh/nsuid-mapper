@@ -37,11 +37,14 @@ function setup(sourceDemos: Demo[], targetDemos: Demo[], parents = 1) {
         query: string;
         variables: { country: string };
       };
-      expect(query).toContain('targetApplicationItems(salesStatuses:');
       if (variables.country === 'GB') {
+        // The target title query carries its demo list with the SKU identity.
+        expect(query).toContain('NsuidMapTitleCandidates');
+        expect(query).toContain('demoItems { nsUid labelPlatform }');
         targetRequests++;
         return Response.json({ data: { item: { itemsV2: [title(GB_TITLE, targetDemos)] } } });
       }
+      expect(query).toContain('targetApplicationItems(salesStatuses:');
       const targetApplicationItems = Array.from({ length: parents }, () =>
         title(US_TITLE, sourceDemos),
       );

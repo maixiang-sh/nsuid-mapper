@@ -41,7 +41,7 @@ function setup(
 ) {
   const to = options.to ?? 'JP';
   let gets = 0;
-  const batches: number[] = [];
+  const queries: string[] = [];
   const fetchImpl = (async (_url, init) => {
     if (init?.method !== 'POST') {
       gets++;
@@ -51,13 +51,12 @@ function setup(
       query: string;
       variables: { nsUids: number[]; nsUid: number };
     };
+    queries.push(body.query.match(/query (\w+)/)![1]!);
     expect(body.query).toContain('[PUBLIC, UNSEARCHABLE]');
-    if (!body.query.includes('NsuidMapRelated')) {
-      expect(body.query).toContain(
-        '... on ConsumableItemV2 { itemId consumableItemGroup { publisher { id } } }',
-      );
-      expect(body.query).not.toContain('formalName');
-    }
+    expect(body.query).toContain(
+      '... on ConsumableItemV2 { itemId consumableItemGroup { publisher { id } } }',
+    );
+    expect(body.query).not.toContain('formalName');
     if (body.query.includes('NsuidMapIdentity')) {
       return Response.json({ data: { item: { itemsV2: [source] } } });
     }
@@ -81,7 +80,8 @@ function setup(
                       },
                     ]
                   : [],
-              includedBundleItems: listed.map((n) => ({ nsUid: n.nsUid })),
+              // Bundle identities arrive inline with the parent listing.
+              includedBundleItems: listed,
               dlcItems: {
                 items: options.truncate ? [{ __typename: 'DlcItem', nsUid: 70050000000001 }] : [],
                 offsetInfo: { total: options.truncate ? 10000 : options.earlyEmpty ? 1 : 0 },
@@ -91,19 +91,13 @@ function setup(
         },
       });
     }
-    if (body.query.includes('NsuidMapBundleContents')) {
-      batches.push(body.variables.nsUids.length);
-      return Response.json({
-        data: { item: { itemsV2: targets.filter((n) => body.variables.nsUids.includes(n.nsUid)) } },
-      });
-    }
     throw new Error('Unexpected query');
   }) as typeof fetch;
   const client = new NsuidMapper({ fetch: fetchImpl });
   return {
     map: () => client.mapNsuid(source.nsUid, { from: 'US', to: [to] }),
     gets: () => gets,
-    batches,
+    queries,
   };
 }
 
@@ -113,6 +107,15 @@ test('Z-A: discovers the Edition parent and never downgrades to the base bundle'
   }).map();
   expect(r.targets[0]?.nsuid).toBe('70070000039564');
   expect(r.source.contentAppIds).toContain('0100f43008c45001');
+});
+
+test('Z-A: bundle identities come with the parent listings, without a separate batch', async () => {
+  const client = setup(sample(70070000039411), [sample(70070000039562), sample(70070000039564)], {
+    linked: true,
+  });
+  expect((await client.map()).targets[0]?.nsuid).toBe('70070000039564');
+  // Source identity, then one listing each for the base and the linked Edition.
+  expect(client.queries).toEqual(['NsuidMapIdentity', 'NsuidMapRelated', 'NsuidMapRelated']);
 });
 
 test('Z-A: an absent Edition cannot be replaced by a base bundle', async () => {
@@ -352,10 +355,9 @@ test('an early empty page invalidates even an included bundle with a real matchi
   const r = await client.map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.reason).toContain('empty page before declared total');
-  expect(client.batches).toEqual([]);
 });
 
-test('large candidate lists are split into batches without hiding ambiguity across batches', async () => {
+test('large inline candidate lists do not hide ambiguity', async () => {
   const targets = Array.from({ length: 101 }, (_, i) => {
     const target = sample(70070000039564);
     target.nsUid = 70070099999000 + i; // Synthetic duplicate candidates.
@@ -363,7 +365,6 @@ test('large candidate lists are split into batches without hiding ambiguity acro
   });
   const client = setup(sample(70070000039411), targets);
   const result = await client.map();
-  expect(client.batches).toEqual([50, 50, 1]);
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.reason).toContain('Ambiguous');
 });
