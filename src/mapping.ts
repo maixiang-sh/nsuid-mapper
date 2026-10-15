@@ -23,7 +23,7 @@
 import { getCountryLanguageInfo } from './catalogs.ts';
 import { deriveBaseApplicationIdFromDlcAppId, normalizeRegion, parseAppId } from './ids.ts';
 import type { RequestOptions } from './types.ts';
-import { fetchIdentities, fetchRelatedItems, type Identity } from './upstreams/savanna.ts';
+import { fetchRelatedItems, fetchTitleCandidates, type Identity } from './upstreams/savanna.ts';
 
 // A missing redirect does not distinguish an unavailable game from a different regional build.
 const UNRESOLVED_NSUID_REASON =
@@ -107,13 +107,7 @@ async function mapTitle(
   const nsuid = await resolver.resolve(identity.appId, target, options);
   if (!nsuid) return { region: target, reason: UNRESOLVED_NSUID_REASON };
   const { country, language } = contextFor(target);
-  const candidates = await fetchIdentities([nsuid], country, language, options);
-  const linked = candidates.get(nsuid)?.upgradeNsuids?.filter((id) => id !== nsuid) ?? [];
-  if (linked.length) {
-    for (const [id, candidate] of await fetchIdentities(linked, country, language, options)) {
-      candidates.set(id, candidate);
-    }
-  }
+  const candidates = await fetchTitleCandidates(nsuid, country, language, options);
   if (![...candidates.values()].some((candidate) => candidate.kind === 'title')) {
     return {
       region: target,

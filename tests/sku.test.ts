@@ -22,7 +22,9 @@ function title(nsUid: string, upgraded: boolean) {
     }>,
   };
 }
+let targetQueries: string[] = [];
 function setup(change?: (nodes: ReturnType<typeof title>[]) => void) {
+  targetQueries = [];
   const nodes = [
     title(usBase, false),
     title(usUpgrade, true),
@@ -37,14 +39,29 @@ function setup(change?: (nodes: ReturnType<typeof title>[]) => void) {
     if (init?.method !== 'POST')
       return new Response(null, { status: 307, headers: { location: `/GB/en/titles/${gbBase}` } });
     const body = JSON.parse(String(init.body)) as {
-      variables: { nsUids: number[] };
+      variables: { nsUids: number[]; country: string };
       query: string;
     };
+    if (body.variables.country === 'GB') targetQueries.push(body.query.match(/query (\w+)/)![1]!);
     expect(body.query).toContain('labelPlatform');
     expect(body.query).toContain('upgradeInfo');
+    const requested = nodes.filter((n) => body.variables.nsUids.map(String).includes(n.nsUid));
+    if (!body.query.includes('NsuidMapTitleCandidates')) {
+      return Response.json({ data: { item: { itemsV2: requested } } });
+    }
+    // Upstream nests linked editions' full SKU identity; an absent edition is null.
+    const nested = (nsUid: string) => nodes.find((n) => n.nsUid === nsUid) ?? null;
     return Response.json({
       data: {
-        item: { itemsV2: nodes.filter((n) => body.variables.nsUids.map(String).includes(n.nsUid)) },
+        item: {
+          itemsV2: requested.map((n) => ({
+            ...n,
+            upgradeInfo: n.upgradeInfo.map((link) => ({
+              baseApplicationItem: nested(link.baseApplicationItem.nsUid),
+              upgradeApplicationItem: nested(link.upgradeApplicationItem.nsUid),
+            })),
+          })),
+        },
       },
     });
   }) as typeof fetch;
@@ -58,6 +75,12 @@ test('keeps the Switch 2 Edition and compares rights independent of order', asyn
   expect((await client.mapNsuid(usBase, { from: 'US', to: ['GB'] })).targets[0]?.nsuid).toBe(
     gbBase,
   );
+});
+test('linked editions arrive with the target title in one Savanna request', async () => {
+  const client = setup();
+  const result = await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] });
+  expect(result.targets[0]?.nsuid).toBe(gbUpgrade);
+  expect(targetQueries).toEqual(['NsuidMapTitleCandidates']);
 });
 test('does not downgrade when the upgrade SKU is absent', async () => {
   const client = setup((nodes) => nodes.splice(3, 1));

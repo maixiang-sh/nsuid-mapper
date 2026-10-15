@@ -245,24 +245,12 @@ describe('bundle parent candidates', () => {
             item: {
               applicationItem: {
                 includedBundleItems:
-                  matches && relation === 'included' ? [{ nsUid: Number(BUNDLE_NSUID) }] : [],
+                  matches && relation === 'included' ? [bundleNode(fingerprint)] : [],
                 dlcItems: {
-                  items:
-                    matches && relation === 'dlc'
-                      ? [{ __typename: 'BundleItem', nsUid: Number(BUNDLE_NSUID) }]
-                      : [],
+                  items: matches && relation === 'dlc' ? [bundleNode(fingerprint)] : [],
                   offsetInfo: { total: matches && relation === 'dlc' ? 1 : 0 },
                 },
               },
-            },
-          },
-        });
-      }
-      if (body.query.includes('NsuidMapBundleContents')) {
-        return Response.json({
-          data: {
-            item: {
-              itemsV2: [bundleNode(fingerprint)],
             },
           },
         });
