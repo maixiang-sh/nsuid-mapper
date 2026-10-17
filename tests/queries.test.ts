@@ -28,6 +28,7 @@ test('valid ticket types are unsupported, distinct from an omitted catalog produ
     );
   }
   expect(result.get(missing)?.reason).toContain('source NSUID was not returned');
+  expect(result.get(missing)?.code).toBe('source_not_found');
 });
 
 test('bundle paging counts DLC entries without fetching their identities, including the last page', async () => {

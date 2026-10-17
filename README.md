@@ -119,9 +119,12 @@ and an injectable `fetch`. Invalid timeout values throw `TypeError` before fetch
 HTTP, GraphQL, malformed responses and cancellation use `NsuidMapError`; a hard
 failure in one target country rejects the whole `mapNsuid` call.
 
-An unmapped target instead has a human-readable `reason`. Check whether `nsuid`
-is present rather than parsing that text. The [reason reference](docs/technical-design.zh-CN.md#未映射原因)
-explains the distinction between missing candidates, ambiguity and unfinished scans.
+An unmapped target instead has a stable `code` and a human-readable `reason`.
+Branch on `code` (`source_not_found`, `unsupported`, `insufficient_identity`,
+`unresolved`, `no_match`, `ambiguous`, `incomplete`); the `reason` wording may
+change. A source identity that cannot be mapped carries the same `code`. The
+[reason reference](docs/technical-design.zh-CN.md#未映射原因) explains the
+distinction between missing candidates, ambiguity and unfinished scans.
 
 ## Custom product queries
 

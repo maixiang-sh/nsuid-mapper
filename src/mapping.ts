@@ -23,7 +23,12 @@
 import { getCountryLanguageInfo } from './catalogs.ts';
 import { deriveBaseApplicationIdFromDlcAppId, normalizeRegion, parseAppId } from './ids.ts';
 import type { RequestOptions } from './types.ts';
-import { fetchRelatedItems, fetchTitleCandidates, type Identity } from './upstreams/savanna.ts';
+import {
+  fetchRelatedItems,
+  fetchTitleCandidates,
+  type Identity,
+  type MappingCode,
+} from './upstreams/savanna.ts';
 
 // A missing redirect does not distinguish an unavailable game from a different regional build.
 const UNRESOLVED_NSUID_REASON =
@@ -43,8 +48,19 @@ export interface RegionMapping {
   region: string;
   /** The region's nsuid, when it could be established. */
   nsuid?: string;
-  /** How it was established, or why it could not be. */
+  /** Stable category of why the nsuid could not be established. */
+  code?: MappingCode;
+  /** Human-readable detail; wording may change, so branch on `code`. */
   reason?: string;
+}
+
+function unmapped(region: string, code: MappingCode, reason: string): RegionMapping {
+  return { region, code, reason };
+}
+
+/** A source identity's own problem, carried to every target it blocks. */
+function blocked(identity: Identity, region: string, code: MappingCode, fallback: string) {
+  return unmapped(region, identity.code ?? code, identity.reason ?? fallback);
 }
 
 export interface NsuidMapping {
@@ -82,7 +98,8 @@ export async function mapInto(
   }
 
   if (identity.kind === 'dlc') {
-    if (!identity.appId) return { region: target, reason: identity.reason ?? 'no application id' };
+    if (!identity.appId)
+      return blocked(identity, target, 'insufficient_identity', 'no application id');
     return mapDlc(identity, target, resolver, options);
   }
 
@@ -90,7 +107,7 @@ export async function mapInto(
     return mapBundle(identity, target, resolver, options);
   }
 
-  return { region: target, reason: identity.reason ?? `${identity.kind} cannot be mapped` };
+  return blocked(identity, target, 'unsupported', `${identity.kind} cannot be mapped`);
 }
 
 /** The matching target title keeps its identity so a demo can read the title's demo list. */
@@ -100,19 +117,21 @@ async function mapTitle(
   resolver: AppIdResolver,
   options?: RequestOptions,
 ): Promise<RegionMapping & { title?: Identity }> {
-  if (!identity.appId) return { region: target, reason: identity.reason ?? 'no application id' };
+  if (!identity.appId)
+    return blocked(identity, target, 'insufficient_identity', 'no application id');
   if (!identity.labelPlatform || !identity.titleIds?.length) {
-    return { region: target, reason: 'Source title has insufficient SKU identity' };
+    return unmapped(target, 'insufficient_identity', 'Source title has insufficient SKU identity');
   }
   const nsuid = await resolver.resolve(identity.appId, target, options);
-  if (!nsuid) return { region: target, reason: UNRESOLVED_NSUID_REASON };
+  if (!nsuid) return unmapped(target, 'unresolved', UNRESOLVED_NSUID_REASON);
   const { country, language } = contextFor(target);
   const candidates = await fetchTitleCandidates(nsuid, country, language, options);
   if (![...candidates.values()].some((candidate) => candidate.kind === 'title')) {
-    return {
-      region: target,
-      reason: 'No title identity was returned for the resolved target NSUID',
-    };
+    return unmapped(
+      target,
+      'no_match',
+      'No title identity was returned for the resolved target NSUID',
+    );
   }
   const matches = [...candidates.values()].filter(
     (candidate) =>
@@ -122,13 +141,13 @@ async function mapTitle(
       sameSet(candidate.titleIds, identity.titleIds!),
   );
   if (matches.length === 1) return { region: target, title: matches[0] };
-  return {
-    region: target,
-    reason:
-      matches.length > 1
-        ? 'Ambiguous title SKU: multiple candidates match the source platform and rights'
-        : 'No title SKU matches the source platform and rights',
-  };
+  return matches.length > 1
+    ? unmapped(
+        target,
+        'ambiguous',
+        'Ambiguous title SKU: multiple candidates match the source platform and rights',
+      )
+    : unmapped(target, 'no_match', 'No title SKU matches the source platform and rights');
 }
 
 /**
@@ -147,38 +166,46 @@ async function mapDemo(
     (title.demos ?? []).filter((demo) => demo.labelPlatform === source.labelPlatform);
   const parents = source.parentTitles!.slice(0, MAX_PARENT_TITLES);
   if (parents.some((parent) => onPlatform(parent).length !== 1)) {
-    return {
+    return unmapped(
       region,
-      reason:
-        'Ambiguous demo: the source title does not list exactly one demo on this platform; the available identity fields cannot distinguish them',
-    };
+      'ambiguous',
+      'Ambiguous demo: the source title does not list exactly one demo on this platform; the available identity fields cannot distinguish them',
+    );
   }
   const found = new Set<string>();
-  let reason: string | undefined;
+  let failure: RegionMapping | undefined;
   for (const parent of parents) {
     const mapped = await mapTitle(parent, region, resolver, options);
     if (!mapped.title) {
-      reason ??= mapped.reason;
+      failure ??= mapped;
       continue;
     }
     const demos = onPlatform(mapped.title);
     if (demos.length > 1) {
-      return {
+      return unmapped(
         region,
-        reason:
-          'Ambiguous demo: the target title lists multiple demos on this platform; the available identity fields cannot distinguish them',
-      };
+        'ambiguous',
+        'Ambiguous demo: the target title lists multiple demos on this platform; the available identity fields cannot distinguish them',
+      );
     }
     if (demos[0]) found.add(demos[0].nsuid);
-    else reason ??= 'The target title lists no demo on the source platform';
+    else
+      failure ??= unmapped(
+        region,
+        'no_match',
+        'The target title lists no demo on the source platform',
+      );
   }
   if (found.size === 1) return { region, nsuid: [...found][0] };
-  return {
-    region,
-    reason: found.size
-      ? 'Ambiguous demo: parent titles lead to different target demos'
-      : (reason ?? UNRESOLVED_NSUID_REASON),
-  };
+  if (found.size)
+    return unmapped(
+      region,
+      'ambiguous',
+      'Ambiguous demo: parent titles lead to different target demos',
+    );
+  return failure
+    ? unmapped(region, failure.code ?? 'unresolved', failure.reason ?? UNRESOLVED_NSUID_REASON)
+    : unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
 }
 
 /** Bound distinct parent candidates and upstream upgrade links. */
@@ -196,7 +223,7 @@ async function mapBundle(
     !source.titleIds?.length ||
     !source.contentKeys?.length
   ) {
-    return { region, reason: source.reason ?? 'Bundle has insufficient SKU identity' };
+    return blocked(source, region, 'insufficient_identity', 'Bundle has insufficient SKU identity');
   }
   const parents = new Set<string>();
   let malformed = 0;
@@ -211,41 +238,43 @@ async function mapBundle(
     }
   }
   if (!parents.size)
-    return {
+    return unmapped(
       region,
-      reason: `no valid parent application id (${malformed} malformed application id; ${nonParent} application id outside the base/DLC ranges)`,
-    };
+      'insufficient_identity',
+      `no valid parent application id (${malformed} malformed application id; ${nonParent} application id outside the base/DLC ranges)`,
+    );
   if (parents.size > MAX_PARENT_TITLES)
-    return { region, reason: 'Bundle parent candidate cap exceeded' };
+    return unmapped(region, 'incomplete', 'Bundle parent candidate cap exceeded');
 
   const queue = new Set<string>();
   for (const appId of parents) {
     const parent = await resolver.resolve(appId, region, options);
     if (parent) queue.add(parent);
   }
-  if (!queue.size) return { region, reason: UNRESOLVED_NSUID_REASON };
+  if (!queue.size) return unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
   const { country, language } = contextFor(region);
   const candidates = new Map<string, Identity>();
   let scanned = 0;
   // A Set iterator visits newly appended linked parents and deduplicates cycles.
   for (const parent of queue) {
     if (++scanned > MAX_PARENT_TITLES)
-      return { region, reason: 'Bundle parent candidate cap exceeded' };
+      return unmapped(region, 'incomplete', 'Bundle parent candidate cap exceeded');
     const related = await fetchRelatedItems(parent, country, language, true, options);
     if (related.truncated)
-      return {
+      return unmapped(
         region,
-        reason: `Bundle candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
-      };
+        'incomplete',
+        `Bundle candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
+      );
     for (const linked of related.upgradeNsuids) queue.add(linked);
     for (const candidate of related.bundles) candidates.set(candidate.nsuid, candidate);
   }
   if (!candidates.size) {
-    return {
+    return unmapped(
       region,
-      reason:
-        'No bundle candidates were returned for the resolved parent titles; parent listings may omit unavailable or NOT_SALE items',
-    };
+      'no_match',
+      'No bundle candidates were returned for the resolved parent titles; parent listings may omit unavailable or NOT_SALE items',
+    );
   }
   const matches = [...candidates.values()].filter(
     (candidate) =>
@@ -255,13 +284,17 @@ async function mapBundle(
       sameSet(candidate.contentKeys, source.contentKeys!),
   );
   if (matches.length === 1) return { region, nsuid: matches[0]!.nsuid };
-  return {
-    region,
-    reason:
-      matches.length > 1
-        ? 'Ambiguous bundle SKU: multiple candidates match platform, rights and contents'
-        : 'No bundle SKU matches platform, rights and contents; unavailable or NOT_SALE items may be absent from parent listings',
-  };
+  return matches.length > 1
+    ? unmapped(
+        region,
+        'ambiguous',
+        'Ambiguous bundle SKU: multiple candidates match platform, rights and contents',
+      )
+    : unmapped(
+        region,
+        'no_match',
+        'No bundle SKU matches platform, rights and contents; unavailable or NOT_SALE items may be absent from parent listings',
+      );
 }
 
 /** Compare complete DLC SKUs, including entries exposed only through upgradeInfo. */
@@ -272,20 +305,25 @@ async function mapDlc(
   options?: RequestOptions,
 ): Promise<RegionMapping> {
   if (!source.labelPlatform || !source.titleIds?.length) {
-    return { region, reason: 'Source DLC has insufficient platform or ROM rights' };
+    return unmapped(
+      region,
+      'insufficient_identity',
+      'Source DLC has insufficient platform or ROM rights',
+    );
   }
   const parents = new Set<string>();
   for (const id of source.titleIds) {
     try {
       const parent = parentApplicationId(id);
-      if (!parent) return { region, reason: 'DLC has no valid parent application id' };
+      if (!parent)
+        return unmapped(region, 'insufficient_identity', 'DLC has no valid parent application id');
       parents.add(parent);
     } catch {
-      return { region, reason: 'DLC has a malformed application id' };
+      return unmapped(region, 'insufficient_identity', 'DLC has a malformed application id');
     }
   }
   if (parents.size > MAX_PARENT_TITLES)
-    return { region, reason: 'DLC parent candidate cap exceeded' };
+    return unmapped(region, 'incomplete', 'DLC parent candidate cap exceeded');
 
   const candidates = new Map<string, Identity>();
   const visited = new Set<string>();
@@ -296,19 +334,21 @@ async function mapDlc(
     visited.add(parent);
     const related = await fetchRelatedItems(parent, country, language, false, options);
     if (related.truncated)
-      return {
+      return unmapped(
         region,
-        reason: `DLC candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
-      };
+        'incomplete',
+        `DLC candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
+      );
     // upgradeInfo and dlcItems can both expose the same SKU; count it only once.
     for (const candidate of related.dlcs) candidates.set(candidate.nsuid, candidate);
   }
-  if (!visited.size) return { region, reason: UNRESOLVED_NSUID_REASON };
+  if (!visited.size) return unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
   if (!candidates.size) {
-    return {
+    return unmapped(
       region,
-      reason: 'No DLC candidates were returned for the resolved parent titles',
-    };
+      'no_match',
+      'No DLC candidates were returned for the resolved parent titles',
+    );
   }
   const matches = [...candidates.values()].filter(
     (candidate) =>
@@ -316,13 +356,17 @@ async function mapDlc(
       sameSet(candidate.titleIds, source.titleIds!),
   );
   if (matches.length === 1) return { region, nsuid: matches[0]!.nsuid };
-  return {
-    region,
-    reason:
-      matches.length > 1
-        ? 'Ambiguous DLC SKU: multiple candidates match platform and rights; the available identity fields cannot distinguish them'
-        : 'No DLC SKU matches the source platform and complete ROM rights',
-  };
+  return matches.length > 1
+    ? unmapped(
+        region,
+        'ambiguous',
+        'Ambiguous DLC SKU: multiple candidates match platform and rights; the available identity fields cannot distinguish them',
+      )
+    : unmapped(
+        region,
+        'no_match',
+        'No DLC SKU matches the source platform and complete ROM rights',
+      );
 }
 
 /**

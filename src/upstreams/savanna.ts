@@ -165,6 +165,27 @@ export async function fetchAppIds(
 /** Identity kinds, including products without a supported cross-region mapping. */
 export type IdentityKind = 'title' | 'dlc' | 'bundle' | 'demo' | 'consumable' | 'unknown';
 
+/**
+ * Stable category of why an nsuid cannot be mapped. The paired `reason` text is
+ * for people and may be reworded; consumers branch on the code.
+ *
+ * - `source_not_found`: the source catalog did not return the source nsuid.
+ * - `unsupported`: the kind (or a bundle member) has no cross-region anchor.
+ * - `insufficient_identity`: upstream omitted fields the SKU identity needs.
+ * - `unresolved`: the redirector found no product in the target region.
+ * - `no_match`: target candidates were checked and none matched.
+ * - `ambiguous`: more than one target candidate matched.
+ * - `incomplete`: a candidate scan hit a cap or incomplete paging.
+ */
+export type MappingCode =
+  | 'source_not_found'
+  | 'unsupported'
+  | 'insufficient_identity'
+  | 'unresolved'
+  | 'no_match'
+  | 'ambiguous'
+  | 'incomplete';
+
 export interface Identity {
   nsuid: string;
   kind: IdentityKind;
@@ -184,6 +205,8 @@ export interface Identity {
   demos?: Array<{ nsuid: string; labelPlatform?: string }>;
   /** Demo only: the titles upstream says it belongs to, in the demo's own region. */
   parentTitles?: Identity[];
+  /** Category of why this nsuid cannot be mapped, when it cannot. */
+  code?: MappingCode;
   /** Why this nsuid cannot be mapped, when it cannot. */
   reason?: string;
 }
@@ -234,6 +257,7 @@ export async function fetchIdentities(
       out.set(nsuid, {
         nsuid,
         kind: 'unknown',
+        code: 'source_not_found',
         reason:
           "The source NSUID was not returned by this region's catalog; it may be unavailable here or belong to another region",
       });
@@ -293,6 +317,7 @@ export async function fetchTitleCandidates(
     out.set(nsuid, {
       nsuid,
       kind: 'unknown',
+      code: 'no_match',
       reason: "The NSUID was not returned by this region's catalog",
     });
     return out;
@@ -340,7 +365,12 @@ function toIdentity(node: RawNode): Identity {
               demo?.nsUid ? [{ nsuid: String(demo.nsUid), labelPlatform: demo.labelPlatform }] : [],
             ),
           }
-        : { nsuid, kind: 'title', reason: 'upstream returned no application id' };
+        : {
+            nsuid,
+            kind: 'title',
+            code: 'insufficient_identity',
+            reason: 'upstream returned no application id',
+          };
     }
     case 'DlcItem': {
       const appId = node.romRights?.[0]?.titleId?.trim();
@@ -352,7 +382,12 @@ function toIdentity(node: RawNode): Identity {
             labelPlatform: node.labelPlatform,
             titleIds: normalizedIds((node.romRights ?? []).map((r) => r.titleId)),
           }
-        : { nsuid, kind: 'dlc', reason: 'upstream returned no romRights title id' };
+        : {
+            nsuid,
+            kind: 'dlc',
+            code: 'insufficient_identity',
+            reason: 'upstream returned no romRights title id',
+          };
     }
     case 'BundleItem': {
       const contentAppIds = collectContentAppIds(node);
@@ -365,7 +400,11 @@ function toIdentity(node: RawNode): Identity {
         contentAppIds,
       };
       if (!node.labelPlatform || !titleIds.length || !node.itemsV2?.length) {
-        return { ...identity, reason: 'Bundle has insufficient platform, rights or contents' };
+        return {
+          ...identity,
+          code: 'insufficient_identity',
+          reason: 'Bundle has insufficient platform, rights or contents',
+        };
       }
       const contentKeys: string[] = [];
       for (const wrapper of node.itemsV2) {
@@ -381,6 +420,7 @@ function toIdentity(node: RawNode): Identity {
           ) {
             return {
               ...identity,
+              code: 'insufficient_identity',
               reason: 'Bundle consumable has insufficient itemId or publisher ID',
             };
           }
@@ -392,6 +432,7 @@ function toIdentity(node: RawNode): Identity {
         if (child?.__typename !== 'ApplicationItem' && child?.__typename !== 'DlcItem') {
           return {
             ...identity,
+            code: 'unsupported',
             reason: `Bundle contains unsupported member ${child?.__typename ?? 'unknown'}; no stable cross-region identity`,
           };
         }
@@ -404,6 +445,7 @@ function toIdentity(node: RawNode): Identity {
         ) {
           return {
             ...identity,
+            code: 'insufficient_identity',
             reason: 'Bundle member has insufficient platform, application or ROM rights',
           };
         }
@@ -418,16 +460,27 @@ function toIdentity(node: RawNode): Identity {
       );
       return node.labelPlatform && parentTitles.length
         ? { nsuid, kind: 'demo', labelPlatform: node.labelPlatform, parentTitles }
-        : { nsuid, kind: 'demo', reason: 'upstream returned no platform or parent title for demo' };
+        : {
+            nsuid,
+            kind: 'demo',
+            code: 'insufficient_identity',
+            reason: 'upstream returned no platform or parent title for demo',
+          };
     }
     case 'ConsumableItemV2':
       return {
         nsuid,
         kind: 'consumable',
+        code: 'unsupported',
         reason: 'upstream exposes no application id for consumables',
       };
     default:
-      return { nsuid, kind: 'unknown', reason: `Unsupported item type: ${node.__typename ?? '?'}` };
+      return {
+        nsuid,
+        kind: 'unknown',
+        code: 'unsupported',
+        reason: `Unsupported item type: ${node.__typename ?? '?'}`,
+      };
   }
 }
 

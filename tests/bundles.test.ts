@@ -122,6 +122,7 @@ test('Z-A: an absent Edition cannot be replaced by a base bundle', async () => {
   const result = await setup(sample(70070000039411), [sample(70070000039562)]).map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.reason).toContain('No bundle SKU matches');
+  expect(result.targets[0]?.code).toBe('no_match');
 });
 
 test('empty bundle candidates report a discovery limitation without declaring the product absent', async () => {
@@ -138,6 +139,7 @@ test('multiple exact candidates on different linked parents remain ambiguous', a
   const r = await setup(sample(70070000039411), [a, b], { split: true }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.reason).toContain('Ambiguous');
+  expect(r.targets[0]?.code).toBe('ambiguous');
 });
 
 test('Just Dance: non-searchable 3/12-month rights distinguish Deluxe and Ultimate', async () => {
@@ -334,6 +336,7 @@ test('other unsupported member types still stop mapping before target requests',
   const result = await client.map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.reason).toContain('unsupported member DemoItem');
+  expect(result.targets[0]?.code).toBe('unsupported');
   expect(client.gets()).toBe(0);
 });
 
@@ -348,6 +351,7 @@ test('a paging cap prevents accepting a match from an incomplete candidate scan'
   const r = await setup(sample(70070000039411), [sample(70070000039564)], { truncate: true }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.reason).toContain('paging cap');
+  expect(r.targets[0]?.code).toBe('incomplete');
 });
 
 test('an early empty page invalidates even an included bundle with a real matching identity', async () => {
@@ -378,6 +382,7 @@ test('too many distinct parents are rejected before starting target requests', a
   const result = await client.map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.reason).toContain('parent candidate cap');
+  expect(result.targets[0]?.code).toBe('incomplete');
   expect(client.gets()).toBe(0);
 });
 

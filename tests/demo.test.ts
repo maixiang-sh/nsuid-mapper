@@ -83,6 +83,7 @@ test('demo: a demo on another platform is not a candidate', async () => {
   const r = await setup([bee(US_DEMO)], [other]).map();
   expect(r.nsuid).toBeUndefined();
   expect(r.reason).toContain('no demo on the source platform');
+  expect(r.code).toBe('no_match');
 });
 
 test('demo: two same-platform demos under the source title stay unmapped without target requests', async () => {
@@ -90,6 +91,7 @@ test('demo: two same-platform demos under the source title stay unmapped without
   const r = await s.map();
   expect(r.nsuid).toBeUndefined();
   expect(r.reason).toContain('Ambiguous demo: the source title');
+  expect(r.code).toBe('ambiguous');
   expect(s.targetRequests()).toBe(0);
 });
 
@@ -97,6 +99,7 @@ test('demo: two same-platform demos under the target title stay unmapped', async
   const r = await setup([bee(US_DEMO)], [bee(GB_DEMO), bee(70030000099999)]).map();
   expect(r.nsuid).toBeUndefined();
   expect(r.reason).toContain('Ambiguous demo: the target title');
+  expect(r.code).toBe('ambiguous');
 });
 
 test('demo: without a parent title relation the source reports why', async () => {
@@ -104,5 +107,6 @@ test('demo: without a parent title relation the source reports why', async () =>
   const r = await s.map();
   expect(r.nsuid).toBeUndefined();
   expect(r.reason).toContain('no platform or parent title');
+  expect(r.code).toBe('insufficient_identity');
   expect(s.targetRequests()).toBe(0);
 });

@@ -36,7 +36,7 @@ export {
 } from './client.ts';
 export { NsuidMapError } from './errors.ts';
 export type { NsuidMapping, RegionMapping, AppIdResolver } from './mapping.ts';
-export type { Identity, IdentityKind } from './upstreams/savanna.ts';
+export type { Identity, IdentityKind, MappingCode } from './upstreams/savanna.ts';
 export {
   deriveBaseApplicationIdFromDlcAppId,
   isAppId,

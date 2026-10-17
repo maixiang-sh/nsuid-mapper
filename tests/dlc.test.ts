@@ -95,6 +95,7 @@ test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1
   expect(r.source.titleIds).toEqual(['0400a3a01ee4d001']);
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.reason).toContain('Ambiguous DLC SKU');
+  expect(r.targets[0]?.code).toBe('ambiguous');
   expect(r.targets[0]?.reason).toContain('cannot distinguish');
 });
 test('DLC: empty parent candidates have a distinct reason from identity mismatch', async () => {
