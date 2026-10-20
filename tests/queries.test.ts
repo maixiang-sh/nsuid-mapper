@@ -23,11 +23,12 @@ test('valid ticket types are unsupported, distinct from an omitted catalog produ
     },
   );
   for (const node of tickets) {
+    expect(result.get(String(node.nsUid))?.code).toBe('unsupported');
+    // The type name tells which ticket type was seen.
     expect(result.get(String(node.nsUid))?.reason).toBe(
       `Unsupported item type: ${node.__typename}`,
     );
   }
-  expect(result.get(missing)?.reason).toContain('source NSUID was not returned');
   expect(result.get(missing)?.code).toBe('source_not_found');
 });
 
@@ -81,4 +82,16 @@ test('a zero-total empty page is a complete scan', async () => {
   });
   expect(result.truncated).toBeFalse();
   expect(result.incompleteReason).toBeUndefined();
+});
+
+test('a standalone consumable is identified as unsupported', async () => {
+  // AU 800 V-Bucks, verified live on 2026-10-14.
+  const nsuid = '70090000040108';
+  const result = await fetchIdentities([nsuid], 'AU', 'en', {
+    fetch: (async () =>
+      Response.json({
+        data: { item: { itemsV2: [{ __typename: 'ConsumableItemV2', nsUid: Number(nsuid) }] } },
+      })) as unknown as typeof fetch,
+  });
+  expect(result.get(nsuid)).toMatchObject({ nsuid, kind: 'consumable', code: 'unsupported' });
 });

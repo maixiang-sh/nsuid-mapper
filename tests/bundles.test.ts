@@ -121,16 +121,13 @@ test('Z-A: bundle identities come with the parent listings, without a separate b
 test('Z-A: an absent Edition cannot be replaced by a base bundle', async () => {
   const result = await setup(sample(70070000039411), [sample(70070000039562)]).map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
-  expect(result.targets[0]?.reason).toContain('No bundle SKU matches');
   expect(result.targets[0]?.code).toBe('no_match');
 });
 
 test('empty bundle candidates report a discovery limitation without declaring the product absent', async () => {
   const result = await setup(sample(70070000039411), []).map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
-  expect(result.targets[0]?.reason).toContain('No bundle candidates');
   expect(result.targets[0]?.code).toBe('no_candidates');
-  expect(result.targets[0]?.reason).toContain('parent listings may omit');
 });
 
 test('multiple exact candidates on different linked parents remain ambiguous', async () => {
@@ -139,7 +136,6 @@ test('multiple exact candidates on different linked parents remain ambiguous', a
   b.nsUid = 70070099999004; // Synthetic duplicate, not an online product.
   const r = await setup(sample(70070000039411), [a, b], { split: true }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
-  expect(r.targets[0]?.reason).toContain('Ambiguous');
   expect(r.targets[0]?.code).toBe('ambiguous');
 });
 
@@ -194,7 +190,7 @@ test('a missing consumable itemId stops mapping before target requests', async (
   delete source.itemsV2[1]!.item.itemId;
   const client = setup(source, []);
   const r = await client.map();
-  expect(r.targets[0]?.reason).toContain('insufficient itemId');
+  expect(r.targets[0]?.code).toBe('insufficient_identity');
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(client.gets()).toBe(0);
 });
@@ -276,7 +272,7 @@ test('blank itemId or missing/invalid publisher prevents using a partial consuma
     const client = setup(source, [sample(70070000033921)], { to: 'GB' });
     const result = await client.map();
     expect(result.targets[0]?.nsuid).toBeUndefined();
-    expect(result.targets[0]?.reason).toContain('insufficient itemId or publisher');
+    expect(result.targets[0]?.code).toBe('insufficient_identity');
     expect(client.gets()).toBe(0);
   }
 });
@@ -327,7 +323,7 @@ test('multiple exact consumable bundle candidates remain ambiguous', async () =>
   b.nsUid = 70070099999005;
   const result = await setup(sample(70070000033882), [a, b], { to: 'GB' }).map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
-  expect(result.targets[0]?.reason).toContain('Ambiguous');
+  expect(result.targets[0]?.code).toBe('ambiguous');
 });
 
 test('other unsupported member types still stop mapping before target requests', async () => {
@@ -345,7 +341,7 @@ test('empty member rights do not produce a partial fingerprint', async () => {
   const source = sample(70070000039411);
   source.itemsV2[1]!.item.romRights = [];
   const r = await setup(source, [sample(70070000039564)]).map();
-  expect(r.targets[0]?.reason).toContain('insufficient');
+  expect(r.targets[0]?.code).toBe('insufficient_identity');
 });
 
 test('a paging cap prevents accepting a match from an incomplete candidate scan', async () => {
@@ -359,6 +355,8 @@ test('an early empty page invalidates even an included bundle with a real matchi
   const client = setup(sample(70070000039411), [sample(70070000039564)], { earlyEmpty: true });
   const r = await client.map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
+  expect(r.targets[0]?.code).toBe('incomplete');
+  // The detail distinguishes an early empty page from the paging cap.
   expect(r.targets[0]?.reason).toContain('empty page before declared total');
 });
 
@@ -371,7 +369,7 @@ test('large inline candidate lists do not hide ambiguity', async () => {
   const client = setup(sample(70070000039411), targets);
   const result = await client.map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
-  expect(result.targets[0]?.reason).toContain('Ambiguous');
+  expect(result.targets[0]?.code).toBe('ambiguous');
 });
 
 test('too many distinct parents are rejected before starting target requests', async () => {

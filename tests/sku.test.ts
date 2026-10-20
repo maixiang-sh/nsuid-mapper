@@ -86,7 +86,6 @@ test('does not downgrade when the upgrade SKU is absent', async () => {
   const client = setup((nodes) => nodes.splice(3, 1));
   const result = await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] });
   expect(result.targets[0]?.nsuid).toBeUndefined();
-  expect(result.targets[0]?.reason).toContain('No title SKU');
   expect(result.targets[0]?.code).toBe('no_match');
 });
 test('a native BEE title can match the default redirect SKU', async () => {
@@ -114,16 +113,15 @@ test('does not arbitrarily select between two matching SKUs', async () => {
   });
   const result = await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] });
   expect(result.targets[0]?.nsuid).toBeUndefined();
-  expect(result.targets[0]?.reason).toContain('Ambiguous');
   expect(result.targets[0]?.code).toBe('ambiguous');
 });
 test('rejects missing source SKU evidence', async () => {
   const client = setup((nodes) => {
     nodes[1]!.romRights = [];
   });
-  expect(
-    (await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] })).targets[0]?.reason,
-  ).toContain('insufficient');
+  expect((await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] })).targets[0]?.code).toBe(
+    'insufficient_identity',
+  );
 });
 
 for (const missing of ['platform', 'rights'] as const) {
@@ -147,7 +145,6 @@ for (const missing of ['platform', 'rights'] as const) {
     );
     expect(redirects).toBe(0);
     expect(r.nsuid).toBeUndefined();
-    expect(r.reason).toContain('insufficient');
     expect(r.code).toBe('insufficient_identity');
   });
 }
@@ -163,11 +160,9 @@ test('an unresolved target appId is not reported as proof that the game is unava
     },
   );
   expect(r.nsuid).toBeUndefined();
-  expect(r.reason).toContain('application ID could not be resolved');
   expect(r.code).toBe('unresolved');
-  expect(r.reason).toContain('different regional application ID');
 });
-test('an omitted resolved target has a distinct reason from mismatching title identities', async () => {
+test('an omitted resolved target has a distinct code from mismatching title identities', async () => {
   const r = await mapInto(
     { nsuid: usBase, kind: 'title', appId, labelPlatform: 'HAC', titleIds: [appId] },
     'GB',
@@ -178,7 +173,6 @@ test('an omitted resolved target has a distinct reason from mismatching title id
     },
   );
   expect(r.nsuid).toBeUndefined();
-  expect(r.reason).toContain('No title identity was returned');
   expect(r.code).toBe('no_candidates');
 });
 test('finds upgrade DLC through upgradeInfo even when dlcItems is empty', async () => {

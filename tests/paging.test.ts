@@ -105,7 +105,7 @@ describe('related-item paging', () => {
 
   test('reports a genuine miss without claiming truncation', async () => {
     // Nothing carries the wanted appId: the answer is a clean negative, and the
-    // reason must not blame paging for it.
+    // result must not blame paging for it.
     const { fetchImpl } = upstream(25, -1);
     const r = await new NsuidMapper({ fetch: fetchImpl }).mapNsuid('70050000000001', {
       from: 'JP',
@@ -114,9 +114,7 @@ describe('related-item paging', () => {
     });
 
     expect(r.targets[0]!.nsuid).toBeUndefined();
-    expect(r.targets[0]!.reason).toContain(
-      'No DLC SKU matches the source platform and complete ROM rights',
-    );
+    expect(r.targets[0]!.code).toBe('no_match');
   });
 
   test('an empty page ends the walk even when total claims there is more', async () => {
@@ -163,6 +161,7 @@ describe('related-item paging', () => {
     });
 
     expect(r.targets[0]!.nsuid).toBeUndefined();
+    expect(r.targets[0]!.code).toBe('incomplete');
     expect(r.targets[0]!.reason).toContain('empty page before declared total');
     expect(pages).toBe(1);
   });
@@ -349,6 +348,8 @@ describe('bundle parent candidates', () => {
     );
 
     expect(result.nsuid).toBeUndefined();
+    expect(result.code).toBe('insufficient_identity');
+    // The counts tell malformed IDs apart from IDs outside the base/DLC ranges.
     expect(result.reason).toContain('no valid parent application id');
     expect(result.reason).toContain('1 malformed application id');
     expect(result.reason).toContain('1 application id outside the base/DLC ranges');

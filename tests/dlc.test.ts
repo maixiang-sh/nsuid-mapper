@@ -83,7 +83,7 @@ test('DLC: two matching SKUs remain ambiguous', async () => {
   b.nsUid = 70050099999001; // Synthetic duplicate candidate.
   const r = await setup(sample(70050000023111), [a, b]).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
-  expect(r.targets[0]?.reason).toContain('Ambiguous');
+  expect(r.targets[0]?.code).toBe('ambiguous');
 });
 test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1', async () => {
   // Actual 2026-10-11 selections; no synthetic duplicate candidate or modified rights.
@@ -94,18 +94,13 @@ test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1
   }).map();
   expect(r.source.titleIds).toEqual(['0400a3a01ee4d001']);
   expect(r.targets[0]?.nsuid).toBeUndefined();
-  expect(r.targets[0]?.reason).toContain('Ambiguous DLC SKU');
   expect(r.targets[0]?.code).toBe('ambiguous');
-  expect(r.targets[0]?.reason).toContain('cannot distinguish');
 });
-test('DLC: empty parent candidates have a distinct reason from identity mismatch', async () => {
+test('DLC: empty parent candidates have a distinct code from identity mismatch', async () => {
   const source = sample(70050000023111);
   const empty = (await setup(source, []).map()).targets[0];
-  expect(empty?.reason).toContain('No DLC candidates');
   expect(empty?.code).toBe('no_candidates');
-  expect((await setup(source, [sample(70050000078275)]).map()).targets[0]?.reason).toContain(
-    'No DLC SKU matches',
-  );
+  expect((await setup(source, [sample(70050000078275)]).map()).targets[0]?.code).toBe('no_match');
 });
 test('DLC: the same SKU in both upgradeInfo and dlcItems is not ambiguity', async () => {
   const r = await setup(sample(70050000077805), [sample(70050000078275)], {
@@ -118,12 +113,13 @@ test('DLC: missing source platform stops mapping before target requests', async 
   source.labelPlatform = '';
   const client = setup(source, [sample(70050000023117)]);
   const r = await client.map();
-  expect(r.targets[0]?.reason).toContain('insufficient');
+  expect(r.targets[0]?.code).toBe('insufficient_identity');
   expect(client.redirects()).toBe(0);
 });
 test('DLC: a match found in a truncated scan is not accepted as unique', async () => {
   const r = await setup(sample(70050000023111), [sample(70050000023117)], { truncate: true }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
+  expect(r.targets[0]?.code).toBe('incomplete');
   expect(r.targets[0]?.reason).toContain('paging cap');
 });
 
@@ -133,6 +129,7 @@ test('DLC: an early empty page cannot establish uniqueness of a real matching SK
     earlyEmpty: true,
   }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
+  expect(r.targets[0]?.code).toBe('incomplete');
   expect(r.targets[0]?.reason).toContain('empty page before declared total');
 });
 

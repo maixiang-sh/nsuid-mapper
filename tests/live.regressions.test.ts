@@ -63,7 +63,7 @@ live(
     expect(gets).toBe(0);
     for (const target of r.targets) {
       expect(target.nsuid).toBeUndefined();
-      expect(target.reason).toContain('insufficient');
+      expect(target.code).toBe('insufficient_identity');
     }
   },
   60_000,
@@ -80,9 +80,10 @@ for (const [id, typename] of [
         from: 'AU',
         to: ['GB'],
       });
+      expect(r.source.code).toBe('unsupported');
       expect(r.source.reason).toBe(`Unsupported item type: ${typename}`);
       expect(r.targets[0]?.nsuid).toBeUndefined();
-      expect(r.targets[0]?.reason).toBe(r.source.reason);
+      expect(r.targets[0]?.code).toBe('unsupported');
     },
     60_000,
   );
@@ -215,7 +216,7 @@ for (const id of ['70070000028930', '70070000028931']) {
         to: ['GB'],
       });
       expect(result.targets[0]?.nsuid).toBeUndefined();
-      expect(result.targets[0]?.reason).toContain('No bundle SKU matches');
+      expect(result.targets[0]?.code).toBe('no_match');
     },
     120_000,
   );
@@ -251,7 +252,7 @@ for (const [id, expected] of consumableBundles) {
         to: Object.keys(expected),
       });
       expect(Object.fromEntries(result.targets.map((t) => [t.region, t.nsuid]))).toEqual(expected);
-      expect(result.source.reason).toBeUndefined();
+      expect(result.source.code).toBeUndefined();
     },
     120_000,
   );
@@ -281,10 +282,10 @@ live(
       from: 'US',
       to: ['GB', 'AU'],
     });
-    expect(result.source.reason).toBeUndefined();
+    expect(result.source.code).toBeUndefined();
     for (const target of result.targets) {
       expect(target.nsuid).toBeUndefined();
-      expect(target.reason).toContain('No bundle SKU matches');
+      expect(target.code).toBe('no_match');
     }
   },
   120_000,
@@ -299,7 +300,7 @@ live(
     });
     expect(result.source.kind).toBe('consumable');
     expect(result.targets[0]?.nsuid).toBeUndefined();
-    expect(result.targets[0]?.reason).toContain('no application id');
+    expect(result.targets[0]?.code).toBe('unsupported');
   },
   30_000,
 );
@@ -353,8 +354,7 @@ live(
     });
     for (const target of r.targets) {
       expect(target.nsuid).toBeUndefined();
-      expect(target.reason).toContain('Ambiguous DLC SKU');
-      expect(target.reason).toContain('cannot distinguish');
+      expect(target.code).toBe('ambiguous');
     }
   },
   120_000,
@@ -375,7 +375,6 @@ live(
       '70070000040623',
     ]);
     // This records current candidate discovery, not a claim that JP never sold it.
-    expect(r.targets[0]?.reason).toContain('No bundle candidates');
     expect(r.targets[0]?.code).toBe('no_candidates');
   },
   120_000,
@@ -393,7 +392,7 @@ live(
     expect(r.targets[0]?.nsuid).toBe('70010000029013');
     for (const target of r.targets.slice(1)) {
       expect(target.nsuid).toBeUndefined();
-      expect(target.reason).toContain('different regional application ID');
+      expect(target.code).toBe('unresolved');
     }
     expect(await client.resolveNsuidToAppId('70010000029015', 'GB')).toBe('0100b04011742000');
     expect(await client.resolveNsuidToAppId('70010000029016', 'US')).toBe('0100b04011742000');
@@ -521,11 +520,11 @@ for (const [id, from, expected] of [
   );
 }
 
-for (const [id, from, kind, reason] of [
-  ['70030000025288', 'AU', 'unknown', 'source NSUID was not returned'],
-  ['70090000040108', 'AU', 'consumable', 'no application id for consumables'],
-  ['70090000040109', 'AU', 'consumable', 'no application id for consumables'],
-  ['70090000040457', 'AU', 'consumable', 'no application id for consumables'],
+for (const [id, from, kind, code] of [
+  ['70030000025288', 'AU', 'unknown', 'source_not_found'],
+  ['70090000040108', 'AU', 'consumable', 'unsupported'],
+  ['70090000040109', 'AU', 'consumable', 'unsupported'],
+  ['70090000040457', 'AU', 'consumable', 'unsupported'],
 ] as const) {
   live(
     `unsupported or missing source makes no target requests: ${id} ${from}`,
@@ -544,12 +543,12 @@ for (const [id, from, kind, reason] of [
       });
       const r = await client.mapNsuid(id, { from, to: ['JP', 'GB', 'HK'] });
       expect(r.source.kind).toBe(kind);
-      expect(r.source.reason).toContain(reason);
+      expect(r.source.code).toBe(code);
       expect([...countries]).toEqual([from]);
       expect(redirects).toBe(0);
       for (const target of r.targets) {
         expect(target.nsuid).toBeUndefined();
-        expect(target.reason).toBe(r.source.reason);
+        expect(target.code).toBe(code);
       }
     },
     60_000,

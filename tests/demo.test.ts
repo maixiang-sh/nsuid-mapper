@@ -1,5 +1,7 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { NsuidMapper } from '../src/client.ts';
+import { mapInto } from '../src/mapping.ts';
+import type { Identity } from '../src/upstreams/savanna.ts';
 
 // Star Fox, verified live on 2026-10-14: US demo 70030000025288 → GB 70030000025302.
 const APP = '0400e88025b1a000';
@@ -82,7 +84,6 @@ test('demo: a demo on another platform is not a candidate', async () => {
   );
   const r = await setup([bee(US_DEMO)], [other]).map();
   expect(r.nsuid).toBeUndefined();
-  expect(r.reason).toContain('no demo on the source platform');
   expect(r.code).toBe('no_candidates');
 });
 
@@ -90,7 +91,6 @@ test('demo: two same-platform demos under the source title stay unmapped without
   const s = setup([bee(US_DEMO), bee(70030000099999)], [bee(GB_DEMO)]);
   const r = await s.map();
   expect(r.nsuid).toBeUndefined();
-  expect(r.reason).toContain('Ambiguous demo: the source title');
   expect(r.code).toBe('ambiguous');
   expect(s.targetRequests()).toBe(0);
 });
@@ -98,7 +98,6 @@ test('demo: two same-platform demos under the source title stay unmapped without
 test('demo: two same-platform demos under the target title stay unmapped', async () => {
   const r = await setup([bee(US_DEMO)], [bee(GB_DEMO), bee(70030000099999)]).map();
   expect(r.nsuid).toBeUndefined();
-  expect(r.reason).toContain('Ambiguous demo: the target title');
   expect(r.code).toBe('ambiguous');
 });
 
@@ -106,7 +105,86 @@ test('demo: without a parent title relation the source reports why', async () =>
   const s = setup([bee(US_DEMO)], [bee(GB_DEMO)], 0);
   const r = await s.map();
   expect(r.nsuid).toBeUndefined();
-  expect(r.reason).toContain('no platform or parent title');
   expect(r.code).toBe('insufficient_identity');
   expect(s.targetRequests()).toBe(0);
+});
+
+// Synthetic two-parent demos: one demo listed under two titles with different application IDs.
+describe('demo with two parent titles', () => {
+  const APP_A = '0400000000010000';
+  const APP_B = '0400000000020000';
+  const TITLE_A = '70010099999101';
+  const TITLE_B = '70010099999102';
+  const SOURCE_DEMO = '70030099999001';
+
+  function parent(appId: string, nsuid: string): Identity {
+    return {
+      nsuid,
+      kind: 'title',
+      appId,
+      labelPlatform: 'BEE',
+      titleIds: [appId],
+      demos: [{ nsuid: SOURCE_DEMO, labelPlatform: 'BEE' }],
+    };
+  }
+  const source: Identity = {
+    nsuid: SOURCE_DEMO,
+    kind: 'demo',
+    labelPlatform: 'BEE',
+    parentTitles: [parent(APP_A, '70010099999001'), parent(APP_B, '70010099999002')],
+  };
+
+  /** Target titles keyed by their target NSUID, each with its demo list. */
+  function map(redirects: Record<string, string | undefined>, demos: Record<string, Demo[]>) {
+    const appIds: Record<string, string> = { [TITLE_A]: APP_A, [TITLE_B]: APP_B };
+    return mapInto(
+      source,
+      'GB',
+      { resolve: async (appId) => redirects[appId] },
+      {
+        fetch: (async (_url, init) => {
+          const { variables } = JSON.parse(String(init?.body)) as {
+            variables: { nsUids: number[] };
+          };
+          const nsuid = String(variables.nsUids[0]);
+          const appId = appIds[nsuid]!;
+          const node = {
+            ...title(Number(nsuid), demos[nsuid] ?? []),
+            applications: [{ id: appId }],
+          };
+          return Response.json({
+            data: { item: { itemsV2: [{ ...node, romRights: [{ titleId: appId }] }] } },
+          });
+        }) as typeof fetch,
+      },
+    );
+  }
+
+  test('an unresolved parent is skipped when another parent leads to the demo', async () => {
+    const r = await map({ [APP_A]: undefined, [APP_B]: TITLE_B }, { [TITLE_B]: [bee(GB_DEMO)] });
+    expect(r).toEqual({ region: 'GB', nsuid: String(GB_DEMO) });
+  });
+
+  test('both parents leading to the same demo is not ambiguity', async () => {
+    const r = await map(
+      { [APP_A]: TITLE_A, [APP_B]: TITLE_B },
+      { [TITLE_A]: [bee(GB_DEMO)], [TITLE_B]: [bee(GB_DEMO)] },
+    );
+    expect(r.nsuid).toBe(String(GB_DEMO));
+  });
+
+  test('parents leading to different demos are ambiguous', async () => {
+    const r = await map(
+      { [APP_A]: TITLE_A, [APP_B]: TITLE_B },
+      { [TITLE_A]: [bee(GB_DEMO)], [TITLE_B]: [bee(70030099999002)] },
+    );
+    expect(r.nsuid).toBeUndefined();
+    expect(r.code).toBe('ambiguous');
+  });
+
+  test('when no parent resolves, the first failure is reported', async () => {
+    const r = await map({ [APP_A]: undefined, [APP_B]: undefined }, {});
+    expect(r.nsuid).toBeUndefined();
+    expect(r.code).toBe('unresolved');
+  });
 });

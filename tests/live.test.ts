@@ -122,7 +122,7 @@ describe('what cannot be mapped', () => {
       const r = await client().mapNsuid(JP.title, { from: 'JP', to: ['KR', 'TW'] });
       for (const target of r.targets) {
         expect(target.nsuid).toBeUndefined();
-        expect(target.reason).toBeTruthy();
+        expect(target.code).toBe('unresolved');
       }
     },
     60_000,
@@ -134,10 +134,9 @@ describe('what cannot be mapped', () => {
       // A US nsuid does not resolve in a JP context — nsuids are region-local.
       const r = await client().mapNsuid('70010000095203', { from: 'JP', to: ['US'] });
       expect(r.source.kind).toBe('unknown');
-      expect(r.source.reason).toBe(
-        "The source NSUID was not returned by this region's catalog; it may be unavailable here or belong to another region",
-      );
+      expect(r.source.code).toBe('source_not_found');
       expect(r.targets[0]?.nsuid).toBeUndefined();
+      expect(r.targets[0]?.code).toBe('source_not_found');
     },
     30_000,
   );

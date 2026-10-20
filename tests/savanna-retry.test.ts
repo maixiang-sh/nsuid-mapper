@@ -396,3 +396,46 @@ test('a buffered Savanna response returned after the deadline remains a timeout'
   expect((error as NsuidMapError).retryable).toBeFalse();
   expect(calls).toBe(1);
 });
+
+describe('non-retryable responses without a GraphQL error', () => {
+  async function send(response: () => Response) {
+    let calls = 0;
+    const error = await execute(
+      query,
+      {},
+      {
+        retries: 2,
+        fetch: (async () => {
+          calls++;
+          return response();
+        }) as unknown as typeof fetch,
+      },
+    ).catch((e: unknown) => e);
+    return { error: error as NsuidMapError, calls };
+  }
+
+  test('a non-JSON success response is a response error', async () => {
+    const { error, calls } = await send(() => new Response('<html></html>', { status: 200 }));
+    expect(error).toBeInstanceOf(NsuidMapError);
+    expect(error.kind).toBe('response');
+    expect(error.status).toBe(200);
+    expect(error.retryable).toBeFalse();
+    expect(calls).toBe(1);
+  });
+
+  test('a non-JSON client error keeps its status and is not retried', async () => {
+    const { error, calls } = await send(() => new Response('Forbidden', { status: 403 }));
+    expect(error.kind).toBe('response');
+    expect(error.status).toBe(403);
+    expect(error.retryable).toBeFalse();
+    expect(calls).toBe(1);
+  });
+
+  test('a JSON client error without GraphQL errors is an HTTP error', async () => {
+    const { error, calls } = await send(() => Response.json({}, { status: 400 }));
+    expect(error.kind).toBe('http');
+    expect(error.status).toBe(400);
+    expect(error.retryable).toBeFalse();
+    expect(calls).toBe(1);
+  });
+});
