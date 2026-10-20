@@ -101,8 +101,9 @@ then explains why instead of guessing:
 
 Works for 45 countries, including Japan, Hong Kong, the US, Canada, Mexico, Brazil,
 the UK, Australia, New Zealand and most of Europe. Korea, Taiwan, mainland China,
-Southeast Asia, the Gulf states and parts of Latin America do not work: Nintendo's redirect link does not
-lead to a product page there.
+Southeast Asia, parts of the Middle East and Latin America, and the Caribbean do
+not work: Nintendo's redirect link does not lead to a product page there. See the
+[full country list](docs/reference.md#country-list).
 
 Countries are written as two-letter codes such as `JP`, `US` or `GB`. One call maps
 one product into at most 8 countries.
