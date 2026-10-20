@@ -2,7 +2,8 @@
 
 [中文](reference.zh-CN.md) · [README](../README.md) · [How it works](how-it-works.md)
 
-Countries are two-letter ISO codes (`JP`, `US`, `GB`); lowercase is accepted.
+Countries and regions are identified by two-letter ISO codes (`JP`, `US`, `GB`);
+lowercase is accepted.
 NSUIDs may be strings or numbers.
 
 ## mapNsuid
@@ -11,11 +12,11 @@ NSUIDs may be strings or numbers.
 const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 ```
 
-| Option                   | Meaning                                                               |
-| ------------------------ | --------------------------------------------------------------------- |
-| `from`                   | Country of the source NSUID. An NSUID only resolves in its own store. |
-| `to`                     | Up to 8 target countries. Duplicates are removed.                     |
-| `signal`, `timeoutMs`, … | See [request options](#request-options).                              |
+| Option                   | Meaning                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| `from`                   | Country or region of the source NSUID. An NSUID only resolves in its own store. |
+| `to`                     | Up to 8 targets. Duplicates are removed.                                        |
+| `signal`, `timeoutMs`, … | See [request options](#request-options).                                        |
 
 Result:
 
@@ -30,7 +31,7 @@ Result:
   are. Branch on `code` ([result codes](#result-codes)); `reason` may be reworded.
 - `source.kind`: `title`, `dlc`, `bundle`, `demo`, `consumable` or `unknown`.
 - If the source cannot be mapped, `source` has the same `code` and `reason`, and no
-  target country is requested.
+  target is requested.
 - Other `source` fields hold the identity used for comparison: application ID,
   platform, ROM rights and bundle members.
 
@@ -38,11 +39,11 @@ Result:
 
 | `code`                  | Meaning                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `source_not_found`      | The source country did not return the NSUID; it may belong to another country.              |
+| `source_not_found`      | The source store did not return the NSUID; it may belong to another store.                  |
 | `unsupported`           | Unsupported type: consumable, ticket, unknown type, or a bundle with an unsupported member. |
 | `insufficient_identity` | Savanna omitted data needed for comparison, such as platform or ROM rights.                 |
-| `unresolved`            | The redirector returned no product for the application ID in the target country.            |
-| `no_candidates`         | The target country returned no candidates.                                                  |
+| `unresolved`            | The redirector returned no product for the application ID in the target store.              |
+| `no_candidates`         | The target store returned no candidates.                                                    |
 | `no_match`              | Candidates were returned; none has the same identity.                                       |
 | `ambiguous`             | Several candidates have the same identity.                                                  |
 | `incomplete`            | A search reached a limit before finishing.                                                  |
@@ -70,7 +71,7 @@ different application ID in the target region appears as `unresolved`.
 - `acdIndex` selects among the products of one application ID, starting at 0. It
   is a position, not a platform. `enumerateSkus` tries 0, 1, 2… until a product
   repeats; `max` defaults to 16, up to 32.
-- With `defaultRegion` set on the client, the country argument may be omitted.
+- With `defaultRegion` set on the client, the `country` argument may be omitted.
 
 ## Client options
 
@@ -92,7 +93,7 @@ new NsuidMapper({
 | `retries`             | Default retry count                                                    |
 | `headers`             | Extra headers for both endpoints; override defaults with the same name |
 | `fetch`               | Custom `fetch` implementation, e.g. for tests                          |
-| `defaultRegion`       | Country used when a lookup method omits it                             |
+| `defaultRegion`       | Country or region used when a lookup method omits it                   |
 | `defaultEnumerateMax` | Default `max` for `enumerateSkus`                                      |
 | `baseUrl`             | Redirector host; default `https://ec.nintendo.com`                     |
 
@@ -116,7 +117,7 @@ jitter. A `Retry-After` header sets the minimum wait; if that wait exceeds the
 remaining timeout, the original error is thrown immediately. Other errors are not
 retried.
 
-Invalid input (malformed NSUID or country code, more than 8 target countries,
+Invalid input (malformed NSUID or country/region code, more than 8 targets,
 invalid `timeoutMs`) throws `TypeError` before any request.
 
 ## Errors
@@ -132,33 +133,33 @@ A request that fails after its retries throws `NsuidMapError`:
 | `retryAfterMs` | Wait requested by `Retry-After`, in milliseconds                        |
 
 `abort` means the call was cancelled through `signal`; `response` means the reply
-could not be parsed. If any target country fails, the whole `mapNsuid` call
-throws. To keep the other results, map each country separately with the
+could not be parsed. If any target fails, the whole `mapNsuid` call
+throws. To keep the other results, map each target separately with the
 [low-level functions](#low-level-functions).
 
 ## Request costs
 
-`mapNsuid` sends one Savanna request for the source, then per target country:
+`mapNsuid` sends one Savanna request for the source, then per target:
 
-| Type        | Requests per target country                                                                 |
+| Type        | Requests per target                                                                         |
 | ----------- | ------------------------------------------------------------------------------------------- |
 | Title, demo | 1 redirector + 1 Savanna                                                                    |
 | DLC         | 1 redirector per parent title + 1 Savanna per 100 listed DLC                                |
 | Bundle      | 1 redirector per parent title + 1 Savanna per 100 listed items per title and linked edition |
 
-Most products have one parent title, so most mappings need 2 requests per country.
-Target countries run concurrently; requests within a country run sequentially. A
+Most products have one parent title, so most mappings need 2 requests per target.
+Targets run concurrently; requests within a target run sequentially. A
 search reads at most 16 parent titles and 40 pages per title.
 
-## Country list
+## Countries and regions
 
-Based on a 2026-07-23 test of all 92 countries Savanna serves, using four widely
-released titles. Nintendo may change this at any time. A supported country does
+Based on a 2026-07-23 test of all 92 countries and regions Savanna serves, using
+four widely released titles. Nintendo may change this at any time. Support does
 not guarantee that every product is sold there.
 
 ### Supported (45)
 
-| Region                     | Countries                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Area                       | Countries and regions                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Asia (2)                   | Japan `JP`, Hong Kong `HK`                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Americas (8)               | United States `US`, Canada `CA`, Mexico `MX`, Brazil `BR`, Argentina `AR`, Chile `CL`, Colombia `CO`, Peru `PE`                                                                                                                                                                                                                                                                                                                                            |
@@ -168,10 +169,9 @@ not guarantee that every product is sold there.
 
 ### Not supported (47)
 
-The redirector returns a generic store page, an empty page or 404 in these
-countries.
+The redirector returns a generic store page, an empty page or 404 here.
 
-| Region                         | Countries                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Area                           | Countries and regions                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | East Asia (3)                  | South Korea `KR`, Taiwan `TW`, Mainland China `CN`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Southeast Asia (4)             | Malaysia `MY`, Philippines `PH`, Singapore `SG`, Thailand `TH`                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -179,33 +179,33 @@ countries.
 | Central and South America (15) | Bolivia `BO`, Belize `BZ`, Costa Rica `CR`, Ecuador `EC`, French Guiana `GF`, Guatemala `GT`, Guyana `GY`, Honduras `HN`, Nicaragua `NI`, Panama `PA`, Paraguay `PY`, Suriname `SR`, El Salvador `SV`, Uruguay `UY`, Venezuela `VE`                                                                                                                                                                                                                         |
 | Caribbean (22)                 | Antigua and Barbuda `AG`, Anguilla `AI`, Aruba `AW`, Barbados `BB`, Bermuda `BM`, Bahamas `BS`, Dominica `DM`, Dominican Republic `DO`, Grenada `GD`, Guadeloupe `GP`, Haiti `HT`, Jamaica `JM`, Saint Kitts and Nevis `KN`, Cayman Islands `KY`, Saint Lucia `LC`, Martinique `MQ`, Montserrat `MS`, Turks and Caicos Islands `TC`, Trinidad and Tobago `TT`, Saint Vincent and the Grenadines `VC`, British Virgin Islands `VG`, U.S. Virgin Islands `VI` |
 
-Countries in neither list are still requested.
+Codes in neither list are still requested.
 
-## Countries and languages
+## Country and region helpers
 
-| Function                                    | Returns                                                                      |
-| ------------------------------------------- | ---------------------------------------------------------------------------- |
-| `isMappable(country)`                       | `false` for unsupported countries; `true` otherwise, including unknown codes |
-| `contextFor(country)`                       | `{ country, language }`: normalized code and the language used in queries    |
-| `getCountryLanguageInfo(country)`           | Default and available languages, or `undefined`                              |
-| `isCountryLanguageSupported(country, lang)` | Whether the language is listed for the country                               |
+| Function                                    | Returns                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `isMappable(country)`                       | `false` for unsupported countries and regions; `true` otherwise, including unknown codes |
+| `contextFor(country)`                       | `{ country, language }`: normalized code and the language used in queries                |
+| `getCountryLanguageInfo(country)`           | Default and available languages, or `undefined`                                          |
+| `isCountryLanguageSupported(country, lang)` | Whether the language is listed for that code                                             |
 
-Countries in one region often share NSUIDs (e.g. GB and AU), but not always.
-Request every country you need.
+Stores in the same area often share NSUIDs (e.g. GB and AU), but not always.
+Request every target you need.
 
 ## Low-level functions
 
 | Export                                               | Use                                                                     |
 | ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `fetchIdentities`, `mapInto`                         | Read the source once, then map and handle failures per country          |
+| `fetchIdentities`, `mapInto`                         | Read the source once, then map and handle failures per target           |
 | `execute`, `SHOP_ID`, `contextFor`                   | Send custom Savanna queries, e.g. to read names or prices after mapping |
 | `isAppId`, `parseAppId`, `isCatalogId`, `parseNsuid` | Validate and normalize IDs                                              |
 | `itemKindFromNsuid`                                  | Product type from the NSUID prefix                                      |
 | `deriveBaseApplicationIdFromDlcAppId`                | Parent application ID of a DLC ID                                       |
 | `buildAppIdUrl`                                      | Redirector URL without a client                                         |
-| `MAX_REGIONS_PER_MAP`                                | Target country limit (8)                                                |
+| `MAX_REGIONS_PER_MAP`                                | Target limit (8)                                                        |
 
-`fetchIdentities` and `mapInto` skip the client's input validation and country
+`fetchIdentities` and `mapInto` skip the client's input validation and target
 limit.
 
 ```ts

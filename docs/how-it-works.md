@@ -4,13 +4,13 @@
 
 ## Terms
 
-| Term           | Meaning                                                                                                                                                                      |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NSUID          | 14-digit ID of a product in one country's eShop, e.g. `70010000095202`. The prefix gives the type: `7001` title, `7003` demo, `7005` DLC, `7007` bundle, `7009` consumable.  |
-| Application ID | 16-hex ID of the software, e.g. `040078001ccf6000` (`applications.id`). Usually identical across countries.                                                                  |
-| Platform       | `labelPlatform`: `HAC` is Nintendo Switch, `BEE` is Nintendo Switch 2.                                                                                                       |
-| ROM rights     | `romRights.titleId`: the content IDs a purchase grants. A title grants its application ID; a Switch 2 Edition also grants an upgrade pack; a bundle grants all its contents. |
-| Identity       | Type, platform and the complete set of ROM rights; for bundles, also every member. Products with the same identity are treated as the same product.                          |
+| Term           | Meaning                                                                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NSUID          | 14-digit ID of a product in one country's or region's eShop, e.g. `70010000095202`. The prefix gives the type: `7001` title, `7003` demo, `7005` DLC, `7007` bundle, `7009` consumable. |
+| Application ID | 16-hex ID of the software, e.g. `040078001ccf6000` (`applications.id`). Usually identical across countries and regions.                                                                 |
+| Platform       | `labelPlatform`: `HAC` is Nintendo Switch, `BEE` is Nintendo Switch 2.                                                                                                                  |
+| ROM rights     | `romRights.titleId`: the content IDs a purchase grants. A title grants its application ID; a Switch 2 Edition also grants an upgrade pack; a bundle grants all its contents.            |
+| Identity       | Type, platform and the complete set of ROM rights; for bundles, also every member. Products with the same identity are treated as the same product.                                     |
 
 ## Nintendo endpoints
 
@@ -23,8 +23,8 @@ POST https://wb.lp1.savanna.srv.nintendo.net/graphql
 ```
 
 Requests carry the web eShop's public client ID (`x-nintendo-savanna-client-id`)
-and `Origin: https://ec.nintendo.com`. Each query specifies a country, a language
-and a shop ID. An NSUID only resolves in the store it belongs to; a JP NSUID
+and `Origin: https://ec.nintendo.com`. Each query specifies a country or region code, a
+language and a shop ID. An NSUID only resolves in the store it belongs to; a JP NSUID
 returns nothing from the US store.
 
 Fields used:
@@ -42,7 +42,7 @@ Fields used:
 | `demoItems`, `targetApplicationItems` | A title's demos; a demo's title                | Demo mapping                       |
 
 Savanna looks products up by NSUID only. It has no lookup by application ID, so
-it cannot locate a product in another country on its own.
+it cannot locate a product in another store on its own.
 
 ### The `/apps` redirector
 
@@ -50,15 +50,15 @@ it cannot locate a product in another country on its own.
 GET https://ec.nintendo.com/apps/{applicationId}/{country}
 ```
 
-The response is a redirect whose `Location` contains the country's NSUID. For
+The response is a redirect whose `Location` contains the NSUID for that country or region. For
 Street Fighter 6 (`040078001ccf6000`):
 
-| Country | `Location`                                                                              |
-| ------- | --------------------------------------------------------------------------------------- |
-| US      | `https://www.nintendo.com/pos-redirect/70010000095203?l=en&c=US`                        |
-| GB      | `https://www.nintendo-europe.com/redirect/?nsuid=70010000095204&country=GB&language=en` |
-| HK      | `/HK/zh/titles/70010000095206`                                                          |
-| KR      | `https://www.nintendo.com/kr/games/switch2` (generic page, no NSUID)                    |
+| Code | `Location`                                                                              |
+| ---- | --------------------------------------------------------------------------------------- |
+| US   | `https://www.nintendo.com/pos-redirect/70010000095203?l=en&c=US`                        |
+| GB   | `https://www.nintendo-europe.com/redirect/?nsuid=70010000095204&country=GB&language=en` |
+| HK   | `/HK/zh/titles/70010000095206`                                                          |
+| KR   | `https://www.nintendo.com/kr/games/switch2` (generic page, no NSUID)                    |
 
 The library reads `Location` without following the redirect. This is the only
 public way from an application ID to an NSUID. Limitations:
@@ -67,8 +67,8 @@ public way from an application ID to an NSUID. Limitations:
 - One application ID can cover several products, such as a title and its Switch 2
   Edition. The redirect returns one of them (`acdIndex` selects others), so it is
   a starting point rather than an answer.
-- Some countries never redirect to a product page. See the
-  [country list](reference.md#country-list).
+- Some countries and regions never redirect to a product page. See the
+  [full list](reference.md#countries-and-regions).
 
 ## Mapping steps
 
@@ -76,19 +76,19 @@ All product types follow the same four steps; only step 3 differs.
 
 ```mermaid
 flowchart TD
-    A["1. Read the source product<br>(Savanna, source country)"] --> B["2. Resolve the application ID<br>(redirector, target country)"]
-    B --> C["3. Read the candidates<br>(Savanna, target country)"]
+    A["1. Read the source product<br>(Savanna, source)"] --> B["2. Resolve the application ID<br>(redirector, target)"]
+    B --> C["3. Read the candidates<br>(Savanna, target)"]
     C --> D{"4. Exactly one candidate<br>with the same identity?"}
     D -- yes --> E[Return its NSUID]
     D -- "none or several" --> F[Return code and reason]
 ```
 
-Step 1 runs once. Steps 2–4 run for each target country, concurrently.
+Step 1 runs once. Steps 2–4 run for each target, concurrently.
 
 ### Titles
 
 1. Read the application ID, platform and ROM rights.
-2. Resolve the application ID in the target country.
+2. Resolve the application ID in the target store.
 3. Read the resolved product and the editions linked to it through `upgradeInfo`.
 4. Return the candidate with the same application ID, platform and ROM rights.
 
@@ -104,7 +104,7 @@ resolved through its parent title.
 1. Read the platform and ROM rights.
 2. Derive the parent application ID from each ROM right: a DLC ID equals its
    title's application ID apart from the low 13 bits, e.g. `0100616025b6d002`
-   belongs to `0100616025b6c000`. Resolve it in the target country.
+   belongs to `0100616025b6c000`. Resolve it in the target store.
 3. Read the title's `dlcItems` page by page, plus DLC listed only in `upgradeInfo`.
 4. Return the DLC with the same platform and ROM rights.
 
@@ -145,12 +145,12 @@ NSUID is worse than none.
 An unmapped target carries a `code`; see [result codes](reference.md#result-codes).
 Observed examples:
 
-| Case                                                                         | `code`                                                     |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Monster Hunter Rise uses one application ID in JP/HK and another in US/EU    | `unresolved`                                               |
-| JP DLC `70050000072882` and three sibling DLC have identical ROM rights      | `ambiguous`                                                |
-| A bundle delisted in the target country is omitted from its title's listings | `no_candidates`, or `no_match` if other bundles are listed |
-| KR: the redirector returns a generic page                                    | `unresolved`                                               |
+| Case                                                                       | `code`                                                     |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Monster Hunter Rise uses one application ID in JP/HK and another in US/EU  | `unresolved`                                               |
+| JP DLC `70050000072882` and three sibling DLC have identical ROM rights    | `ambiguous`                                                |
+| A bundle delisted in the target store is omitted from its title's listings | `no_candidates`, or `no_match` if other bundles are listed |
+| KR: the redirector returns a generic page                                  | `unresolved`                                               |
 
 A code does not prove that a product is unavailable, only that the public data
 cannot identify a single product.
@@ -159,5 +159,5 @@ Search limits:
 
 - At most 16 parent titles, and 40 pages of 100 items per title. A search that
   reaches a limit returns `incomplete` instead of a partial result.
-- A parent title without a product page in the target country is skipped.
+- A parent title without a product page in the target store is skipped.
   Uniqueness is checked among the candidates found.

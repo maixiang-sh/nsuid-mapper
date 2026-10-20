@@ -2,13 +2,13 @@
 
 [English](README.md)
 
-将 Nintendo eShop 商品的 NSUID 映射为其他国家同一商品的 NSUID。
+将 Nintendo eShop 商品的 NSUID 映射为其他国家和地区同一商品的 NSUID。
 
 非官方项目，与任天堂无关联，也未获其认可。
 
 ## 背景
 
-NSUID 是商品在某个国家 eShop 中的 14 位编号。同一商品在不同国家的 NSUID 通常不同：
+NSUID 是商品在某个国家或地区的 eShop 中的 14 位编号。同一商品在不同国家和地区的 NSUID 通常不同：
 
 | 街头霸王 6 | NSUID            |
 | ---------- | ---------------- |
@@ -17,7 +17,7 @@ NSUID 是商品在某个国家 eShop 中的 14 位编号。同一商品在不同
 | GB         | `70010000095204` |
 | HK         | `70010000095206` |
 
-任天堂没有提供查询商品在其他国家 NSUID 的 API。
+任天堂没有提供查询商品在其他国家或地区 NSUID 的 API。
 
 ## 原理
 
@@ -26,7 +26,7 @@ NSUID 是商品在某个国家 eShop 中的 14 位编号。同一商品在不同
 - **Savanna**：网页版 eShop 背后的 GraphQL API，返回商品的 application ID、platform 和 ROM rights。
 - **`/apps` redirector**（`ec.nintendo.com/apps/{applicationId}/{country}`）：重定向到该国的商品页，重定向 URL 中包含 NSUID。
 
-对每个目标国家，先通过 redirector 找到候选商品，再用 Savanna 返回的数据与源商品比较。只有恰好一个候选的身份与源商品一致时才返回结果。不比较名称。
+对每个目标，先通过 redirector 找到候选商品，再用 Savanna 返回的数据与源商品比较。只有恰好一个候选的身份与源商品一致时才返回结果。不比较名称。
 
 接口和每一步的细节见[原理说明](docs/how-it-works.zh-CN.md)。
 
@@ -64,7 +64,7 @@ console.log(result.targets);
 ];
 ```
 
-每个目标国家要么有 `nsuid`，要么有 `code` 和 `reason`。程序应根据 `code` 判断；`reason` 供人阅读，措辞可能调整。
+每个目标要么有 `nsuid`，要么有 `code` 和 `reason`。程序应根据 `code` 判断；`reason` 供人阅读，措辞可能调整。
 
 在其他项目中使用时，先运行 `bun run build`，再将本目录作为名为 `nsuid-mapper` 的本地依赖引入。本项目不发布到 npm。
 
@@ -79,17 +79,17 @@ console.log(result.targets);
 | `7009`         | Consumable | 不支持                                       |
 | `7002`、`7008` | Ticket     | 不支持                                       |
 
-即使两个国家都在销售，商品也可能无法映射，此时结果会给出原因而不是猜测。常见原因：
+即使两边都在销售，商品也可能无法映射，此时结果会给出原因而不是猜测。常见原因：
 
-- 同一 title 在不同地区使用不同的 application ID，例如《怪物猎人 崛起》在 JP/HK 与 US/EU 各用一个。
+- 同一 title 在不同商店使用不同的 application ID，例如《怪物猎人 崛起》在 JP/HK 与 US/EU 各用一个。
 - 多个商品的身份数据完全相同，例如 ROM rights 相同的几个 DLC。
-- 商品在目标国家已下架，任天堂的列表中不包含它。
+- 商品在目标商店已下架，任天堂的列表中不包含它。
 
-## 国家
+## 国家和地区
 
-支持 45 个国家，包括 JP、HK、US、CA、MX、BR、GB、AU、NZ 和欧洲大部分国家。KR、TW、中国大陆、东南亚、部分中东和拉丁美洲国家以及加勒比地区不支持，因为 redirector 在这些国家不返回商品页。见[国家列表](docs/reference.zh-CN.md#国家列表)。
+支持 45 个国家和地区，包括 JP、HK、US、CA、MX、BR、GB、AU、NZ 和欧洲大部分国家。KR、TW、中国大陆、东南亚、部分中东和拉丁美洲国家以及加勒比地区不支持，因为 redirector 在这些国家和地区不返回商品页。见[完整列表](docs/reference.zh-CN.md#国家和地区)。
 
-国家使用两位 ISO 代码，例如 `JP`、`US`、`GB`。每次调用最多 8 个目标国家。
+国家和地区使用两位 ISO 代码，例如 `JP`、`US`、`GB`。每次调用最多 8 个目标。
 
 ## 选项
 
@@ -119,7 +119,7 @@ bun run example    # 运行 examples/basic.ts，请求线上接口
 ## 文档
 
 - [原理说明](docs/how-it-works.zh-CN.md)：术语、任天堂接口、各类商品的映射步骤
-- [参考文档](docs/reference.zh-CN.md)：方法、选项、结果代码、错误、请求次数、国家
+- [参考文档](docs/reference.zh-CN.md)：方法、选项、结果代码、错误、请求次数、国家和地区
 
 ## 许可
 

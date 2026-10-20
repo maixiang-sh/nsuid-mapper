@@ -213,11 +213,11 @@ export class NsuidMapper {
     // rejected for a length it does not really have.
     if (targets.length > MAX_REGIONS_PER_MAP) {
       throw new TypeError(
-        `mapNsuid accepts at most ${MAX_REGIONS_PER_MAP} countries per call, got ${targets.length}. ` +
-          'Split the list — all target countries are issued concurrently.',
+        `mapNsuid accepts at most ${MAX_REGIONS_PER_MAP} regions per call, got ${targets.length}. ` +
+          'Split the list — all target regions are issued concurrently.',
       );
     }
-    if (targets.length === 0) throw new TypeError('mapNsuid needs at least one target country');
+    if (targets.length === 0) throw new TypeError('mapNsuid needs at least one target region');
 
     const id = parseNsuid(nsuid);
     const { country, language } = contextFor(from);

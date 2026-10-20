@@ -2,14 +2,14 @@
 
 [中文](README.zh-CN.md)
 
-Maps a Nintendo eShop NSUID to the NSUID of the same product in other countries.
+Maps a Nintendo eShop NSUID to the NSUID of the same product in other countries and regions.
 
 Unofficial project; not affiliated with or endorsed by Nintendo.
 
 ## Background
 
-An NSUID is the 14-digit ID of a product in one country's eShop. The same product
-usually has a different NSUID in each country:
+An NSUID is the 14-digit ID of a product in one country's or region's eShop. The
+same product usually has a different NSUID in each:
 
 | Street Fighter 6 | NSUID            |
 | ---------------- | ---------------- |
@@ -18,7 +18,7 @@ usually has a different NSUID in each country:
 | GB               | `70010000095204` |
 | HK               | `70010000095206` |
 
-Nintendo provides no API for looking up a product's NSUID in another country.
+Nintendo provides no API for looking up a product's NSUID in another country or region.
 
 ## How it works
 
@@ -27,9 +27,10 @@ The library combines two public Nintendo endpoints:
 - **Savanna**, the GraphQL API behind the web eShop, returns a product's
   application ID, platform and ROM rights.
 - **The `/apps` redirector** (`ec.nintendo.com/apps/{applicationId}/{country}`)
-  redirects to that country's product page. The redirect URL contains the NSUID.
+  redirects to the product page in that country or region. The redirect URL
+  contains the NSUID.
 
-For each target country, the redirector locates candidate products, and their
+For each target, the redirector locates candidate products, and their
 Savanna data is compared with the source product. A result is returned only when
 exactly one candidate has the same identity. Names are never compared.
 
@@ -86,23 +87,23 @@ directory as a local dependency named `nsuid-mapper`. It is not published to npm
 | `7009`         | Consumable | No                                                |
 | `7002`, `7008` | Ticket     | No                                                |
 
-A product sold in both countries may still be unmapped. The result then gives the
+A product sold in both places may still be unmapped. The result then gives the
 reason instead of a guess. Common causes:
 
-- The title uses a different application ID per region, e.g. Monster Hunter Rise
-  in JP/HK and in US/EU.
+- The title uses different application IDs in different stores, e.g. Monster
+  Hunter Rise in JP/HK and in US/EU.
 - Several products have identical identity data, e.g. DLC with the same ROM rights.
-- The product is delisted in the target country, and Nintendo's listings omit it.
+- The product is delisted in the target store, and Nintendo's listings omit it.
 
-## Countries
+## Countries and regions
 
-45 countries are supported, including JP, HK, US, CA, MX, BR, GB, AU, NZ and most
+45 countries and regions are supported, including JP, HK, US, CA, MX, BR, GB, AU, NZ and most
 of Europe. KR, TW, mainland China, Southeast Asia, parts of the Middle East and
 Latin America, and the Caribbean are not: the redirector returns no product page
-there. See the [country list](docs/reference.md#country-list).
+there. See the [full list](docs/reference.md#countries-and-regions).
 
-Countries are two-letter ISO codes such as `JP`, `US` or `GB`. One call accepts up
-to 8 target countries.
+Each is identified by a two-letter ISO code such as `JP`, `US` or `GB`. One call
+accepts up to 8 targets.
 
 ## Options
 
@@ -133,7 +134,7 @@ bun run example    # runs examples/basic.ts against the live endpoints
 ## Documentation
 
 - [How it works](docs/how-it-works.md): terms, Nintendo endpoints, steps per product type
-- [Reference](docs/reference.md): methods, options, result codes, errors, request costs, countries
+- [Reference](docs/reference.md): methods, options, result codes, errors, request costs, countries and regions
 
 ## License
 
