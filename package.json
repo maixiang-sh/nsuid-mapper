@@ -23,7 +23,8 @@
     "dist",
     "src",
     "docs",
-    "README.md"
+    "README.md",
+    "README.zh-CN.md"
   ],
   "engines": {
     "node": ">=18.17",
