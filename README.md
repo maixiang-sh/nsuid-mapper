@@ -2,43 +2,42 @@
 
 [中文](README.zh-CN.md)
 
-Find the same Nintendo eShop product in other countries.
+Maps a Nintendo eShop NSUID to the NSUID of the same product in other countries.
 
-This is an unofficial tool. It is not affiliated with or endorsed by Nintendo.
+Unofficial project; not affiliated with or endorsed by Nintendo.
 
-## The problem
+## Background
 
-Every product in the Nintendo eShop has an **NSUID**, a 14-digit product number.
-The same game usually has a different NSUID in each country:
+An NSUID is the 14-digit ID of a product in one country's eShop. The same product
+usually has a different NSUID in each country:
 
 | Street Fighter 6 | NSUID            |
 | ---------------- | ---------------- |
-| Japan            | `70010000095202` |
-| United States    | `70010000095203` |
-| United Kingdom   | `70010000095204` |
-| Hong Kong        | `70010000095206` |
+| JP               | `70010000095202` |
+| US               | `70010000095203` |
+| GB               | `70010000095204` |
+| HK               | `70010000095206` |
 
-Nintendo offers no way to ask "what is this product's number in another country?".
-This library answers that question, for games, DLC, bundles and demos.
+Nintendo provides no API for looking up a product's NSUID in another country.
 
-## How it works, briefly
+## How it works
 
-Two public Nintendo services are combined:
+The library combines two public Nintendo endpoints:
 
-1. Nintendo's product data service (called **Savanna**) tells us what a product
-   is: its game ID, its platform, and exactly which content it includes.
-2. A Nintendo **redirect link** turns a game ID into that game's product page in
-   any country, and the page address contains that country's NSUID.
+- **Savanna**, the GraphQL API behind the web eShop, returns a product's
+  application ID, platform and ROM rights.
+- **The `/apps` redirector** (`ec.nintendo.com/apps/{applicationId}/{country}`)
+  redirects to that country's product page. The redirect URL contains the NSUID.
 
-The library reads the product in the source country, follows the redirect link to
-the target country, reads the products found there, and returns a result only when
-exactly one of them is the same product. It never matches by name.
+For each target country, the redirector locates candidate products, and their
+Savanna data is compared with the source product. A result is returned only when
+exactly one candidate has the same identity. Names are never compared.
 
-[How it works](docs/how-it-works.md) explains each step and each Nintendo service.
+See [How it works](docs/how-it-works.md) for the endpoints and each step.
 
 ## Quick start
 
-Requires [Bun](https://bun.sh). The library has no runtime dependencies.
+Requires [Bun](https://bun.sh). No runtime dependencies.
 
 ```bash
 git clone https://github.com/maixiang-sh/nsuid-mapper.git
@@ -70,75 +69,71 @@ console.log(result.targets);
 ];
 ```
 
-Each target has either an `nsuid`, or a `code` and a `reason` explaining why there
-is none. Check `code` in your program; `reason` is for people to read.
+Each target has either `nsuid`, or `code` and `reason`. Branch on `code`; `reason`
+is for humans and its wording may change.
 
-To use it from another project, run `bun run build` and add this folder as a local
-dependency named `nsuid-mapper`. It is not published to npm.
+To use the library from another project, run `bun run build` and add this
+directory as a local dependency named `nsuid-mapper`. It is not published to npm.
 
-## What can be mapped
+## Supported products
 
-| NSUID starts with | Product type | Supported                                              |
-| ----------------- | ------------ | ------------------------------------------------------ |
-| `7001`            | Game         | Yes                                                    |
-| `7005`            | DLC          | Yes                                                    |
-| `7007`            | Bundle       | Yes                                                    |
-| `7003`            | Demo         | Yes, when its game lists only one demo on its platform |
-| `7009`            | Consumable   | No, e.g. in-game currency                              |
-| `7002`, `7008`    | Tickets      | No                                                     |
+| NSUID prefix   | Type       | Supported                                         |
+| -------------- | ---------- | ------------------------------------------------- |
+| `7001`         | Title      | Yes                                               |
+| `7005`         | DLC        | Yes                                               |
+| `7007`         | Bundle     | Yes                                               |
+| `7003`         | Demo       | Yes, if its title lists one demo on that platform |
+| `7009`         | Consumable | No                                                |
+| `7002`, `7008` | Ticket     | No                                                |
 
-Some products cannot be mapped even when they exist in both countries. The result
-then explains why instead of guessing:
+A product sold in both countries may still be unmapped. The result then gives the
+reason instead of a guess. Common causes:
 
-- **The game uses a different ID in another region.** For example, Monster Hunter
-  Rise has one ID in Japan and Hong Kong and another in the US and Europe.
-- **Several products look identical in Nintendo's data**, such as DLC packs that
-  unlock the same content.
-- **The product is no longer sold** in the target country. Nintendo's product
-  lists leave out delisted items, so they cannot be found.
+- The title uses a different application ID per region, e.g. Monster Hunter Rise
+  in JP/HK and in US/EU.
+- Several products have identical identity data, e.g. DLC with the same ROM rights.
+- The product is delisted in the target country, and Nintendo's listings omit it.
 
 ## Countries
 
-Works for 45 countries, including Japan, Hong Kong, the US, Canada, Mexico, Brazil,
-the UK, Australia, New Zealand and most of Europe. Korea, Taiwan, mainland China,
-Southeast Asia, parts of the Middle East and Latin America, and the Caribbean do
-not work: Nintendo's redirect link does not lead to a product page there. See the
-[full country list](docs/reference.md#country-list).
+45 countries are supported, including JP, HK, US, CA, MX, BR, GB, AU, NZ and most
+of Europe. KR, TW, mainland China, Southeast Asia, parts of the Middle East and
+Latin America, and the Caribbean are not: the redirector returns no product page
+there. See the [country list](docs/reference.md#country-list).
 
-Countries are written as two-letter codes such as `JP`, `US` or `GB`. One call maps
-one product into at most 8 countries.
+Countries are two-letter ISO codes such as `JP`, `US` or `GB`. One call accepts up
+to 8 target countries.
 
 ## Options
 
 ```ts
 const mapper = new NsuidMapper({
-  timeoutMs: 15_000, // per request to Nintendo; default 10 seconds
-  retries: 2, // extra tries after network errors or server overload; default 2
+  timeoutMs: 15_000, // per request; default 10000
+  retries: 2, // retries after network errors, HTTP 429 or 5xx; default 2
 });
 
 await mapper.mapNsuid('70070000040805', {
   from: 'HK',
   to: ['JP', 'US'],
-  signal: AbortSignal.timeout(30_000), // a time limit for the whole call
+  signal: AbortSignal.timeout(30_000), // limit for the whole call
 });
 ```
 
-A failed request to Nintendo throws an `NsuidMapError` after the retries. All
-methods, options, result codes and errors are listed in the
-[reference](docs/reference.md).
+A request that still fails after its retries throws `NsuidMapError`. See the
+[reference](docs/reference.md) for all methods, options, result codes and errors.
 
 ## Development
 
 ```bash
-bun run check      # build, type check, lint, format check and offline tests
-bun run test:live  # tests against Nintendo's real services
-bun run example    # runs examples/basic.ts, also against the real services
+bun run check      # build, typecheck, lint, format check, offline tests
+bun run test:live  # tests against Nintendo's live endpoints
+bun run example    # runs examples/basic.ts against the live endpoints
 ```
 
-## Documents
+## Documentation
 
-- [How it works](docs/how-it-works.md): the idea, the Nintendo services used, and the steps for each product type
-- [Reference](docs/reference.md): methods, options, result codes, errors and request costs
+- [How it works](docs/how-it-works.md): terms, Nintendo endpoints, steps per product type
+- [Reference](docs/reference.md): methods, options, result codes, errors, request costs, countries
 
 ## License
 
