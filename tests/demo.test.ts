@@ -83,7 +83,7 @@ test('demo: a demo on another platform is not a candidate', async () => {
   const r = await setup([bee(US_DEMO)], [other]).map();
   expect(r.nsuid).toBeUndefined();
   expect(r.reason).toContain('no demo on the source platform');
-  expect(r.code).toBe('no_match');
+  expect(r.code).toBe('no_candidates');
 });
 
 test('demo: two same-platform demos under the source title stay unmapped without target requests', async () => {

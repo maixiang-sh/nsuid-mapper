@@ -100,7 +100,9 @@ test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1
 });
 test('DLC: empty parent candidates have a distinct reason from identity mismatch', async () => {
   const source = sample(70050000023111);
-  expect((await setup(source, []).map()).targets[0]?.reason).toContain('No DLC candidates');
+  const empty = (await setup(source, []).map()).targets[0];
+  expect(empty?.reason).toContain('No DLC candidates');
+  expect(empty?.code).toBe('no_candidates');
   expect((await setup(source, [sample(70050000078275)]).map()).targets[0]?.reason).toContain(
     'No DLC SKU matches',
   );

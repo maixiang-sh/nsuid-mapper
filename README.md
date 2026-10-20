@@ -121,8 +121,11 @@ failure in one target country rejects the whole `mapNsuid` call.
 
 An unmapped target instead has a stable `code` and a human-readable `reason`.
 Branch on `code` (`source_not_found`, `unsupported`, `insufficient_identity`,
-`unresolved`, `no_match`, `ambiguous`, `incomplete`); the `reason` wording may
-change. A source identity that cannot be mapped carries the same `code`. The
+`unresolved`, `no_candidates`, `no_match`, `ambiguous`, `incomplete`); the `reason`
+wording may change. `no_candidates` means discovery found nothing to compare, which
+often means a delisted or hidden product and is not proof that it is absent;
+`no_match` means candidates were compared and none matched. Neither proves absence:
+listings omit `NOT_SALE` items, so a delisted target can surface as either. A source identity that cannot be mapped carries the same `code`. The
 [reason reference](docs/technical-design.zh-CN.md#未映射原因) explains the
 distinction between missing candidates, ambiguity and unfinished scans.
 

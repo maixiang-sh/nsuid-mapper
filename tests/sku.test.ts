@@ -179,7 +179,7 @@ test('an omitted resolved target has a distinct reason from mismatching title id
   );
   expect(r.nsuid).toBeUndefined();
   expect(r.reason).toContain('No title identity was returned');
-  expect(r.code).toBe('no_match');
+  expect(r.code).toBe('no_candidates');
 });
 test('finds upgrade DLC through upgradeInfo even when dlcItems is empty', async () => {
   const client = new NsuidMapper({

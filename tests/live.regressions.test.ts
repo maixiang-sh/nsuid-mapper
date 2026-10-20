@@ -376,6 +376,7 @@ live(
     ]);
     // This records current candidate discovery, not a claim that JP never sold it.
     expect(r.targets[0]?.reason).toContain('No bundle candidates');
+    expect(r.targets[0]?.code).toBe('no_candidates');
   },
   120_000,
 );

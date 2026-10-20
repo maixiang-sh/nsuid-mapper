@@ -129,6 +129,7 @@ test('empty bundle candidates report a discovery limitation without declaring th
   const result = await setup(sample(70070000039411), []).map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.reason).toContain('No bundle candidates');
+  expect(result.targets[0]?.code).toBe('no_candidates');
   expect(result.targets[0]?.reason).toContain('parent listings may omit');
 });
 

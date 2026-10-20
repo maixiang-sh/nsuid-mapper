@@ -123,17 +123,17 @@ DLC / 合集的父 AppID 没有目标跳转时跳过，候选范围限定为成�
 
 ## 未映射原因
 
-| 情况                     | `code`                  | 提示及含义                                                                                                             |
-| ------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 源商品未返回             | `source_not_found`      | `source NSUID was not returned`；本次源区目录省略该商品，不等同于识别为不支持类型                                      |
-| 类型或成员无锚点         | `unsupported`           | 独立消耗品、未知类型、合集含不支持的成员；没有可用于跨区的身份                                                         |
-| 源身份字段不足           | `insufficient_identity` | 上游未返回应用编号、平台、权益、合集成员或父本体编号                                                                   |
-| 目标 AppID 未解析        | `unresolved`            | `application ID could not be resolved`；可能未上架或使用另一地区 AppID，当前无法区分                                   |
-| 跳转有编号、身份没有本体 | `no_match`              | `No title identity was returned`；区别于已有本体但平台 / 权益不一致                                                    |
-| 父商品未返回候选         | `no_match`              | `No DLC candidates` / `No bundle candidates`；当前关联及身份查询没有返回候选，不证明该区从未上架                       |
-| 有候选但不匹配           | `no_match`              | `No ... SKU matches`；已有候选，但没有匹配所需身份的商品                                                               |
-| 多个候选匹配             | `ambiguous`             | `Ambiguous ... SKU`；现有字段无法唯一决定商品，拒绝任选一条                                                            |
-| 扫描未完成               | `incomplete`            | `candidate scan incomplete` 或候选上限；上限 / 分页截断或提前空页造成未完成，不接受部分结果；父 AppID 无跳转不属于此项 |
+| 情况                     | `code`                  | 提示及含义                                                                                                                     |
+| ------------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 源商品未返回             | `source_not_found`      | `source NSUID was not returned`；本次源区目录省略该商品，不等同于识别为不支持类型                                              |
+| 类型或成员无锚点         | `unsupported`           | 独立消耗品、未知类型、合集含不支持的成员；没有可用于跨区的身份                                                                 |
+| 源身份字段不足           | `insufficient_identity` | 上游未返回应用编号、平台、权益、合集成员或父本体编号                                                                           |
+| 目标 AppID 未解析        | `unresolved`            | `application ID could not be resolved`；可能未上架或使用另一地区 AppID，当前无法区分                                           |
+| 跳转有编号、身份没有本体 | `no_candidates`         | `No title identity was returned`；区别于已有本体但平台 / 权益不一致                                                            |
+| 父商品未返回候选         | `no_candidates`         | `No DLC candidates` / `No bundle candidates`，或目标本体未列出同平台体验版；当前关联及身份查询没有返回候选，不证明该区从未上架 |
+| 有候选但不匹配           | `no_match`              | `No ... SKU matches`；已有候选，但没有匹配所需身份的商品                                                                       |
+| 多个候选匹配             | `ambiguous`             | `Ambiguous ... SKU`；现有字段无法唯一决定商品，拒绝任选一条                                                                    |
+| 扫描未完成               | `incomplete`            | `candidate scan incomplete` 或候选上限；上限 / 分页截断或提前空页造成未完成，不接受部分结果；父 AppID 无跳转不属于此项         |
 
 提示仅描述实际可见的证据，不能把未发现商品写成确定的停售 / 未上架结论。`code` 是稳定的分类，`reason` 是可调整的人类可读文字；调用方以是否返回 `nsuid` 判断成功，按 `code` 区分失败原因，不解析整段文字。网络、权限、schema、取消等错误继续抛出异常，不混入业务未匹配结果。
 

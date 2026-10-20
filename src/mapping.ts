@@ -129,7 +129,7 @@ async function mapTitle(
   if (![...candidates.values()].some((candidate) => candidate.kind === 'title')) {
     return unmapped(
       target,
-      'no_match',
+      'no_candidates',
       'No title identity was returned for the resolved target NSUID',
     );
   }
@@ -192,7 +192,7 @@ async function mapDemo(
     else
       failure ??= unmapped(
         region,
-        'no_match',
+        'no_candidates',
         'The target title lists no demo on the source platform',
       );
   }
@@ -272,7 +272,7 @@ async function mapBundle(
   if (!candidates.size) {
     return unmapped(
       region,
-      'no_match',
+      'no_candidates',
       'No bundle candidates were returned for the resolved parent titles; parent listings may omit unavailable or NOT_SALE items',
     );
   }
@@ -346,7 +346,7 @@ async function mapDlc(
   if (!candidates.size) {
     return unmapped(
       region,
-      'no_match',
+      'no_candidates',
       'No DLC candidates were returned for the resolved parent titles',
     );
   }

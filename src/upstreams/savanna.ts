@@ -173,7 +173,9 @@ export type IdentityKind = 'title' | 'dlc' | 'bundle' | 'demo' | 'consumable' | 
  * - `unsupported`: the kind (or a bundle member) has no cross-region anchor.
  * - `insufficient_identity`: upstream omitted fields the SKU identity needs.
  * - `unresolved`: the redirector found no product in the target region.
- * - `no_match`: target candidates were checked and none matched.
+ * - `no_candidates`: discovery returned no target candidate at all; the product
+ *   may be delisted or hidden from listings, so this is not proof it is absent.
+ * - `no_match`: target candidates were returned, and none matched.
  * - `ambiguous`: more than one target candidate matched.
  * - `incomplete`: a candidate scan hit a cap or incomplete paging.
  */
@@ -182,6 +184,7 @@ export type MappingCode =
   | 'unsupported'
   | 'insufficient_identity'
   | 'unresolved'
+  | 'no_candidates'
   | 'no_match'
   | 'ambiguous'
   | 'incomplete';
@@ -317,7 +320,7 @@ export async function fetchTitleCandidates(
     out.set(nsuid, {
       nsuid,
       kind: 'unknown',
-      code: 'no_match',
+      code: 'no_candidates',
       reason: "The NSUID was not returned by this region's catalog",
     });
     return out;
