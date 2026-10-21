@@ -17,6 +17,7 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./source": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "files": [

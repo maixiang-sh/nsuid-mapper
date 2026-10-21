@@ -66,7 +66,17 @@ console.log(result.targets);
 
 每个目标要么有 `nsuid`，要么有 `code` 和 `reason`。程序应根据 `code` 判断；`reason` 供人阅读，措辞可能调整。
 
-在其他项目中使用时，先运行 `bun run build`，再将本目录作为名为 `nsuid-mapper` 的本地依赖引入。本项目不发布到 npm。
+本项目不发布到 npm。在其他项目中使用时，从 GitHub 安装并锁定到某个提交：
+
+```bash
+bun add github:maixiang-sh/nsuid-mapper#<commit>
+```
+
+从 GitHub 安装只包含 TypeScript 源码，没有构建产物，因此需要在能编译 TypeScript 的工具（例如 Bun 或 Wrangler）中引入 `nsuid-mapper/source`：
+
+```ts
+import { NsuidMapper } from 'nsuid-mapper/source';
+```
 
 ## 支持的商品
 

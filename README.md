@@ -73,8 +73,19 @@ console.log(result.targets);
 Each target has either `nsuid`, or `code` and `reason`. Branch on `code`; `reason`
 is for humans and its wording may change.
 
-To use the library from another project, run `bun run build` and add this
-directory as a local dependency named `nsuid-mapper`. It is not published to npm.
+The library is not published to npm. To use it from another project, install it
+from GitHub, pinned to a commit:
+
+```bash
+bun add github:maixiang-sh/nsuid-mapper#<commit>
+```
+
+A GitHub install contains the TypeScript source but no build output, so import
+`nsuid-mapper/source` with a tool that compiles TypeScript, such as Bun or Wrangler:
+
+```ts
+import { NsuidMapper } from 'nsuid-mapper/source';
+```
 
 ## Supported products
 
