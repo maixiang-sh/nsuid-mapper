@@ -137,6 +137,7 @@ test('multiple exact candidates on different linked parents remain ambiguous', a
   const r = await setup(sample(70070000039411), [a, b], { split: true }).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.code).toBe('ambiguous');
+  expect(r.targets[0]?.candidates).toEqual(['70070000039564', '70070099999004']);
 });
 
 test('Just Dance: non-searchable 3/12-month rights distinguish Deluxe and Ultimate', async () => {
@@ -370,6 +371,10 @@ test('large inline candidate lists do not hide ambiguity', async () => {
   const result = await client.map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.code).toBe('ambiguous');
+  // Candidates are data and never cut; the text stays short.
+  expect(result.targets[0]?.candidates).toHaveLength(101);
+  expect(result.targets[0]?.reason).toContain('101 candidates');
+  expect(result.targets[0]?.reason).not.toContain('70070099999000');
 });
 
 test('too many distinct parents are rejected before starting target requests', async () => {

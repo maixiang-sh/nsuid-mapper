@@ -355,6 +355,7 @@ live(
     for (const target of r.targets) {
       expect(target.nsuid).toBeUndefined();
       expect(target.code).toBe('ambiguous');
+      expect(target.candidates).toHaveLength(4);
     }
   },
   120_000,

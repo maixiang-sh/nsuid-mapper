@@ -176,7 +176,10 @@ export type IdentityKind = 'title' | 'dlc' | 'bundle' | 'demo' | 'consumable' | 
  * - `no_candidates`: discovery returned no target candidate at all; the product
  *   may be delisted or hidden from listings, so this is not proof it is absent.
  * - `no_match`: target candidates were returned, and none matched.
- * - `ambiguous`: more than one target candidate matched.
+ * - `ambiguous`: the available identity fields cannot pick one product: several
+ *   target candidates matched (listed in `candidates`), or for a demo, the source
+ *   title does not list exactly one demo on the platform, or a parent title is
+ *   itself ambiguous (named in `reason`).
  * - `incomplete`: a candidate scan hit a cap or incomplete paging.
  */
 export type MappingCode =

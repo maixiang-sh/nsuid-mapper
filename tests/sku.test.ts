@@ -114,6 +114,7 @@ test('does not arbitrarily select between two matching SKUs', async () => {
   const result = await client.mapNsuid(usUpgrade, { from: 'US', to: ['GB'] });
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.code).toBe('ambiguous');
+  expect(result.targets[0]?.candidates).toHaveLength(2);
 });
 test('rejects missing source SKU evidence', async () => {
   const client = setup((nodes) => {
