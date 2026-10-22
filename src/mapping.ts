@@ -189,14 +189,22 @@ async function mapDemo(
   const parents = source.parentTitles!.slice(0, MAX_PARENT_TITLES);
   for (const parent of parents) {
     const demos = onPlatform(parent).map((demo) => demo.nsuid);
+    // The link must hold both ways; otherwise the title's sole demo may be another product.
+    if (!demos.includes(source.nsuid)) {
+      return unmapped(
+        region,
+        'insufficient_identity',
+        demos.length
+          ? `The source title ${parent.nsuid} does not list this demo on its platform; it lists: ${listIds(demos)}`
+          : `The source title ${parent.nsuid} lists no demo on this platform`,
+      );
+    }
     if (demos.length === 1) continue;
     // These demos are in the source region, so they stay out of `candidates`.
     return unmapped(
       region,
       'ambiguous',
-      demos.length
-        ? `Ambiguous demo: the source title ${parent.nsuid} lists ${demos.length} demos on this platform: ${listIds(demos)}`
-        : `Ambiguous demo: the source title ${parent.nsuid} lists no demo on this platform`,
+      `Ambiguous demo: the source title ${parent.nsuid} lists ${demos.length} demos on this platform: ${listIds(demos)}`,
     );
   }
   const found = new Set<string>();

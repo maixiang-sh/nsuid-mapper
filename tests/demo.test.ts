@@ -102,14 +102,24 @@ test('demo: a source title listing no demo on the platform stops without target 
   const s = setup([], [bee(GB_DEMO)]);
   const r = await s.map();
   expect(r.nsuid).toBeUndefined();
-  expect(r.code).toBe('ambiguous');
-  expect(r.candidates).toBeUndefined();
+  expect(r.code).toBe('insufficient_identity');
   expect(r.reason).toContain('lists no demo');
   expect(s.targetRequests()).toBe(0);
 });
 
+test('demo: a source title whose only demo is another product stops without target requests', async () => {
+  // Without the reverse link, the target title's sole demo could belong to that other demo.
+  const s = setup([bee(70030000099999)], [bee(GB_DEMO)]);
+  const r = await s.map();
+  expect(r.nsuid).toBeUndefined();
+  expect(r.code).toBe('insufficient_identity');
+  expect(r.reason).toContain('does not list this demo');
+  expect(r.reason).toContain('70030000099999');
+  expect(s.targetRequests()).toBe(0);
+});
+
 test('demo: a long list of source demos is cut in the text', async () => {
-  const demos = Array.from({ length: 7 }, (_, i) => bee(70030000099990 + i));
+  const demos = [bee(US_DEMO), ...Array.from({ length: 6 }, (_, i) => bee(70030000099990 + i))];
   const r = await setup(demos, [bee(GB_DEMO)]).map();
   expect(r.code).toBe('ambiguous');
   expect(r.reason).toContain('7 demos');

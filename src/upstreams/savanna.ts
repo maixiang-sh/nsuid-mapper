@@ -178,7 +178,7 @@ export type IdentityKind = 'title' | 'dlc' | 'bundle' | 'demo' | 'consumable' | 
  * - `no_match`: target candidates were returned, and none matched.
  * - `ambiguous`: the available identity fields cannot pick one product: several
  *   target candidates matched (listed in `candidates`), or for a demo, the source
- *   title does not list exactly one demo on the platform, or a parent title is
+ *   title lists several demos on the platform, or a parent title is
  *   itself ambiguous (named in `reason`).
  * - `incomplete`: a candidate scan hit a cap or incomplete paging.
  */

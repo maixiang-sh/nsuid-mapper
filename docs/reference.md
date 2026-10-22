@@ -31,7 +31,7 @@ Result:
   are. Branch on `code` ([result codes](#result-codes)); `reason` may be reworded.
 - `candidates` appears only with `ambiguous`: the target NSUIDs that all matched,
   sorted. It is absent when the conflict is not between target products of the
-  same kind — a demo whose source title lists no demo or several demos, or whose
+  same kind — a demo whose source title lists several demos, or whose
   parent title is itself ambiguous; `reason` names those NSUIDs instead.
 - `source.kind`: `title`, `dlc`, `bundle`, `demo`, `consumable` or `unknown`.
 - If the source cannot be mapped, `source` has the same `code` and `reason`, and no

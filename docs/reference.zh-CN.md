@@ -26,7 +26,7 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 ```
 
 - 找到商品时有 `nsuid`，否则有 `code` 和 `reason`。程序应根据 `code` 判断（见[结果代码](#结果代码)）；`reason` 的措辞可能调整。
-- `candidates` 只在 `ambiguous` 时出现：所有匹配成功的目标 NSUID，已排序。冲突不在目标区同类商品之间时不出现，例如 demo 的源 title 没有或有多个 demo，或 demo 的父 title 本身有歧义；这时由 `reason` 写出相关 NSUID。
+- `candidates` 只在 `ambiguous` 时出现：所有匹配成功的目标 NSUID，已排序。冲突不在目标区同类商品之间时不出现，例如 demo 的源 title 有多个 demo，或 demo 的父 title 本身有歧义；这时由 `reason` 写出相关 NSUID。
 - `source.kind`：`title`、`dlc`、`bundle`、`demo`、`consumable` 或 `unknown`。
 - 源商品无法映射时，`source` 带有相同的 `code` 和 `reason`，且不会请求任何目标。
 - `source` 的其他字段是用于比较的身份数据：application ID、platform、ROM rights 和 bundle 成员。
