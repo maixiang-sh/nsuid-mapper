@@ -112,7 +112,7 @@ Demo 既没有 application ID，也没有 ROM rights。Savanna 提供了 demo �
 3. 读取目标 title 的 `demoItems`。
 4. 返回同一 platform 上的 demo。
 
-这类依据弱于 ROM rights，因此要求源 title 和目标 title 在该 platform 上都只有一个 demo。
+这类依据弱于 ROM rights，因此要求源 title 和目标 title 在该 platform 上都只有一个 demo，且源 title 的这个 demo 必须就是源 demo 本身。源 title 没有列出 demo，或只列出其他 demo 时，返回 `insufficient_identity`。
 
 ## 名称
 

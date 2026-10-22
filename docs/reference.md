@@ -23,12 +23,16 @@ Result:
 ```ts
 {
   source: { region, nsuid, kind, code?, reason?, … }, // source product as read in `from`
-  targets: [{ region, nsuid?, code?, reason? }],       // one entry per target, in order
+  targets: [{ region, nsuid?, code?, reason?, candidates? }], // one entry per target, in order
 }
 ```
 
 - `nsuid` is present when the product was found; otherwise `code` and `reason`
   are. Branch on `code` ([result codes](#result-codes)); `reason` may be reworded.
+- `candidates` appears only with `ambiguous`: the target NSUIDs that all matched,
+  sorted. It is absent when the conflict is not between target products of the
+  same kind — a demo whose source title lists several demos, or whose
+  parent title is itself ambiguous; `reason` names those NSUIDs instead.
 - `source.kind`: `title`, `dlc`, `bundle`, `demo`, `consumable` or `unknown`.
 - If the source cannot be mapped, `source` has the same `code` and `reason`, and no
   target is requested.
@@ -45,7 +49,7 @@ Result:
 | `unresolved`            | The redirector returned no product for the application ID in the target store.              |
 | `no_candidates`         | The target store returned no candidates.                                                    |
 | `no_match`              | Candidates were returned; none has the same identity.                                       |
-| `ambiguous`             | Several candidates have the same identity.                                                  |
+| `ambiguous`             | No single product can be picked; see `candidates` and `reason`.                             |
 | `incomplete`            | A search reached a limit before finishing.                                                  |
 
 No code proves that a product is unavailable. Listings omit delisted products, so

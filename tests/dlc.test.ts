@@ -84,6 +84,7 @@ test('DLC: two matching SKUs remain ambiguous', async () => {
   const r = await setup(sample(70050000023111), [a, b]).map();
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.code).toBe('ambiguous');
+  expect(r.targets[0]?.candidates).toEqual(['70050000023117', '70050099999001']);
 });
 test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1', async () => {
   // Actual 2026-10-11 selections; no synthetic duplicate candidate or modified rights.
@@ -95,6 +96,10 @@ test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1
   expect(r.source.titleIds).toEqual(['0400a3a01ee4d001']);
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.code).toBe('ambiguous');
+  expect(r.targets[0]?.candidates).toEqual(targets.map((t) => String(t.nsUid)));
+  // IDs live in `candidates`; the text only counts them.
+  expect(r.targets[0]?.reason).toContain('4 candidates');
+  expect(r.targets[0]?.reason).not.toContain('70050000073726');
 });
 test('DLC: empty parent candidates have a distinct code from identity mismatch', async () => {
   const source = sample(70050000023111);

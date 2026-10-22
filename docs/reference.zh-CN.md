@@ -21,11 +21,12 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 ```ts
 {
   source: { region, nsuid, kind, code?, reason?, … }, // 在 from 中读取的源商品
-  targets: [{ region, nsuid?, code?, reason? }],       // 每个目标一项，顺序与 to 相同
+  targets: [{ region, nsuid?, code?, reason?, candidates? }], // 每个目标一项，顺序与 to 相同
 }
 ```
 
 - 找到商品时有 `nsuid`，否则有 `code` 和 `reason`。程序应根据 `code` 判断（见[结果代码](#结果代码)）；`reason` 的措辞可能调整。
+- `candidates` 只在 `ambiguous` 时出现：所有匹配成功的目标 NSUID，已排序。冲突不在目标区同类商品之间时不出现，例如 demo 的源 title 有多个 demo，或 demo 的父 title 本身有歧义；这时由 `reason` 写出相关 NSUID。
 - `source.kind`：`title`、`dlc`、`bundle`、`demo`、`consumable` 或 `unknown`。
 - 源商品无法映射时，`source` 带有相同的 `code` 和 `reason`，且不会请求任何目标。
 - `source` 的其他字段是用于比较的身份数据：application ID、platform、ROM rights 和 bundle 成员。
@@ -40,7 +41,7 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 | `unresolved`            | Redirector 在目标商店中没有返回该 application ID 对应的商品。           |
 | `no_candidates`         | 目标商店没有返回任何候选。                                              |
 | `no_match`              | 返回了候选，但没有身份相同的。                                          |
-| `ambiguous`             | 有多个候选身份相同。                                                    |
+| `ambiguous`             | 无法确定唯一商品；见 `candidates` 和 `reason`。                         |
 | `incomplete`            | 查找在完成前达到上限。                                                  |
 
 任何 `code` 都不能证明商品在目标商店中没有销售。列表中不包含已下架的商品，所以已下架的商品会表现为 `no_candidates` 或 `no_match`；在目标商店使用不同 application ID 的 title 会表现为 `unresolved`。

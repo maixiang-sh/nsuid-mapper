@@ -92,13 +92,46 @@ test('demo: two same-platform demos under the source title stay unmapped without
   const r = await s.map();
   expect(r.nsuid).toBeUndefined();
   expect(r.code).toBe('ambiguous');
+  // Both demos are in the source region, so they are named in the text, not in `candidates`.
+  expect(r.candidates).toBeUndefined();
+  expect(r.reason).toContain(`${US_DEMO}, 70030000099999`);
   expect(s.targetRequests()).toBe(0);
+});
+
+test('demo: a source title listing no demo on the platform stops without target requests', async () => {
+  const s = setup([], [bee(GB_DEMO)]);
+  const r = await s.map();
+  expect(r.nsuid).toBeUndefined();
+  expect(r.code).toBe('insufficient_identity');
+  expect(r.reason).toContain('lists no demo');
+  expect(s.targetRequests()).toBe(0);
+});
+
+test('demo: a source title whose only demo is another product stops without target requests', async () => {
+  // Without the reverse link, the target title's sole demo could belong to that other demo.
+  const s = setup([bee(70030000099999)], [bee(GB_DEMO)]);
+  const r = await s.map();
+  expect(r.nsuid).toBeUndefined();
+  expect(r.code).toBe('insufficient_identity');
+  expect(r.reason).toContain('does not list this demo');
+  expect(r.reason).toContain('70030000099999');
+  expect(s.targetRequests()).toBe(0);
+});
+
+test('demo: a long list of source demos is cut in the text', async () => {
+  const demos = [bee(US_DEMO), ...Array.from({ length: 6 }, (_, i) => bee(70030000099990 + i))];
+  const r = await setup(demos, [bee(GB_DEMO)]).map();
+  expect(r.code).toBe('ambiguous');
+  expect(r.reason).toContain('7 demos');
+  expect(r.reason).toContain('… and 2 more');
+  expect(r.reason).not.toContain('70030000099995');
 });
 
 test('demo: two same-platform demos under the target title stay unmapped', async () => {
   const r = await setup([bee(US_DEMO)], [bee(GB_DEMO), bee(70030000099999)]).map();
   expect(r.nsuid).toBeUndefined();
   expect(r.code).toBe('ambiguous');
+  expect(r.candidates).toEqual([String(GB_DEMO), '70030000099999']);
 });
 
 test('demo: without a parent title relation the source reports why', async () => {
@@ -180,6 +213,35 @@ describe('demo with two parent titles', () => {
     );
     expect(r.nsuid).toBeUndefined();
     expect(r.code).toBe('ambiguous');
+    expect(r.candidates).toEqual([String(GB_DEMO), '70030099999002']);
+  });
+
+  test('an ambiguous parent title is named in the text, not in demo candidates', async () => {
+    const twin = '70010099999103'; // Synthetic second SKU with parent A's identity.
+    const r = await mapInto(
+      { ...source, parentTitles: [source.parentTitles![0]!] },
+      'GB',
+      { resolve: async () => TITLE_A },
+      {
+        fetch: (async (_url, _init) => {
+          const node = (nsuid: string) => ({
+            ...title(Number(nsuid), [bee(GB_DEMO)]),
+            applications: [{ id: APP_A }],
+            romRights: [{ titleId: APP_A }],
+          });
+          // The twin arrives through the title's upgrade links, as linked SKUs do.
+          const main = {
+            ...node(TITLE_A),
+            upgradeInfo: [{ baseApplicationItem: node(twin), upgradeApplicationItem: null }],
+          };
+          return Response.json({ data: { item: { itemsV2: [main] } } });
+        }) as typeof fetch,
+      },
+    );
+    expect(r.nsuid).toBeUndefined();
+    expect(r.code).toBe('ambiguous');
+    expect(r.candidates).toBeUndefined();
+    expect(r.reason).toContain(`2 titles in GB: ${TITLE_A}, ${twin}`);
   });
 
   test('when no parent resolves, the first failure is reported', async () => {

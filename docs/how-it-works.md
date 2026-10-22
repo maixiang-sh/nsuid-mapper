@@ -132,7 +132,9 @@ library maps through that link.
 4. Return the demo on the same platform.
 
 This evidence is weaker than ROM rights, so a result requires both the source
-and the target title to list exactly one demo on that platform.
+and the target title to list exactly one demo on that platform, and the source
+title's demo must be the source demo itself. A source title that lists no demo,
+or only other demos, returns `insufficient_identity`.
 
 ## Names
 

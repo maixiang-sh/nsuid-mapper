@@ -52,10 +52,32 @@ export interface RegionMapping {
   code?: MappingCode;
   /** Human-readable detail; wording may change, so branch on `code`. */
   reason?: string;
+  /**
+   * `ambiguous` only: every target-region NSUID of the source's kind that
+   * passed matching. Absent when the conflict is elsewhere (the source title's
+   * demos, or a demo's parent title); `reason` names those NSUIDs instead.
+   */
+  candidates?: string[];
 }
 
 function unmapped(region: string, code: MappingCode, reason: string): RegionMapping {
   return { region, code, reason };
+}
+
+/** NSUIDs listed in a `reason`; longer lists are cut so the text stays short. */
+const REASON_ID_LIMIT = 5;
+
+function listIds(ids: Iterable<string>): string {
+  const all = [...new Set(ids)].sort();
+  const shown = all.slice(0, REASON_ID_LIMIT).join(', ');
+  return all.length > REASON_ID_LIMIT
+    ? `${shown}, … and ${all.length - REASON_ID_LIMIT} more`
+    : shown;
+}
+
+/** An `ambiguous` result whose target-region candidates are returned as data. */
+function ambiguous(region: string, reason: string, candidates: Iterable<string>): RegionMapping {
+  return { region, code: 'ambiguous', reason, candidates: [...new Set(candidates)].sort() };
 }
 
 /** A source identity's own problem, carried to every target it blocks. */
@@ -142,10 +164,10 @@ async function mapTitle(
   );
   if (matches.length === 1) return { region: target, title: matches[0] };
   return matches.length > 1
-    ? unmapped(
+    ? ambiguous(
         target,
-        'ambiguous',
-        'Ambiguous title SKU: multiple candidates match the source platform and rights',
+        `Ambiguous title SKU: ${matches.length} candidates in ${target} match the source platform and rights`,
+        matches.map((match) => match.nsuid),
       )
     : unmapped(target, 'no_match', 'No title SKU matches the source platform and rights');
 }
@@ -165,11 +187,24 @@ async function mapDemo(
   const onPlatform = (title: Identity) =>
     (title.demos ?? []).filter((demo) => demo.labelPlatform === source.labelPlatform);
   const parents = source.parentTitles!.slice(0, MAX_PARENT_TITLES);
-  if (parents.some((parent) => onPlatform(parent).length !== 1)) {
+  for (const parent of parents) {
+    const demos = onPlatform(parent).map((demo) => demo.nsuid);
+    // The link must hold both ways; otherwise the title's sole demo may be another product.
+    if (!demos.includes(source.nsuid)) {
+      return unmapped(
+        region,
+        'insufficient_identity',
+        demos.length
+          ? `The source title ${parent.nsuid} does not list this demo on its platform; it lists: ${listIds(demos)}`
+          : `The source title ${parent.nsuid} lists no demo on this platform`,
+      );
+    }
+    if (demos.length === 1) continue;
+    // These demos are in the source region, so they stay out of `candidates`.
     return unmapped(
       region,
       'ambiguous',
-      'Ambiguous demo: the source title does not list exactly one demo on this platform; the available identity fields cannot distinguish them',
+      `Ambiguous demo: the source title ${parent.nsuid} lists ${demos.length} demos on this platform: ${listIds(demos)}`,
     );
   }
   const found = new Set<string>();
@@ -177,18 +212,25 @@ async function mapDemo(
   for (const parent of parents) {
     const mapped = await mapTitle(parent, region, resolver, options);
     if (!mapped.title) {
-      failure ??= mapped;
+      // Title candidates are not demos, so they move from `candidates` into the text.
+      failure ??= mapped.candidates
+        ? unmapped(
+            region,
+            'ambiguous',
+            `Ambiguous demo: the parent title ${parent.nsuid} maps to ${mapped.candidates.length} titles in ${region}: ${listIds(mapped.candidates)}`,
+          )
+        : mapped;
       continue;
     }
-    const demos = onPlatform(mapped.title);
+    const demos = onPlatform(mapped.title).map((demo) => demo.nsuid);
     if (demos.length > 1) {
-      return unmapped(
+      return ambiguous(
         region,
-        'ambiguous',
-        'Ambiguous demo: the target title lists multiple demos on this platform; the available identity fields cannot distinguish them',
+        `Ambiguous demo: the target title ${mapped.title.nsuid} in ${region} lists ${demos.length} demos on this platform`,
+        demos,
       );
     }
-    if (demos[0]) found.add(demos[0].nsuid);
+    if (demos[0]) found.add(demos[0]);
     else
       failure ??= unmapped(
         region,
@@ -198,10 +240,10 @@ async function mapDemo(
   }
   if (found.size === 1) return { region, nsuid: [...found][0] };
   if (found.size)
-    return unmapped(
+    return ambiguous(
       region,
-      'ambiguous',
-      'Ambiguous demo: parent titles lead to different target demos',
+      `Ambiguous demo: parent titles lead to ${found.size} different demos in ${region}`,
+      found,
     );
   return failure
     ? unmapped(region, failure.code ?? 'unresolved', failure.reason ?? UNRESOLVED_NSUID_REASON)
@@ -285,10 +327,10 @@ async function mapBundle(
   );
   if (matches.length === 1) return { region, nsuid: matches[0]!.nsuid };
   return matches.length > 1
-    ? unmapped(
+    ? ambiguous(
         region,
-        'ambiguous',
-        'Ambiguous bundle SKU: multiple candidates match platform, rights and contents',
+        `Ambiguous bundle SKU: ${matches.length} candidates in ${region} match platform, rights and contents`,
+        matches.map((match) => match.nsuid),
       )
     : unmapped(
         region,
@@ -357,10 +399,10 @@ async function mapDlc(
   );
   if (matches.length === 1) return { region, nsuid: matches[0]!.nsuid };
   return matches.length > 1
-    ? unmapped(
+    ? ambiguous(
         region,
-        'ambiguous',
-        'Ambiguous DLC SKU: multiple candidates match platform and rights; the available identity fields cannot distinguish them',
+        `Ambiguous DLC SKU: ${matches.length} candidates in ${region} match platform and rights; the available identity fields cannot distinguish them`,
+        matches.map((match) => match.nsuid),
       )
     : unmapped(
         region,
