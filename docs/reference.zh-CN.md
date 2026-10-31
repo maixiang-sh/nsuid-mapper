@@ -47,6 +47,8 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 
 任何 `code` 都不能证明商品在目标商店中没有销售。列表中不包含已下架的商品，所以已下架的商品会表现为 `no_candidates` 或 `no_match`；在目标商店使用不同 application ID 的 title 会表现为 `unresolved`。
 
+具体成因、歧义实例，以及映射结果和执行异常的区别，见[映射结果与原因分类](mapping-outcomes.zh-CN.md)。
+
 ## 其他方法
 
 | 方法                                         | 返回                                                       |

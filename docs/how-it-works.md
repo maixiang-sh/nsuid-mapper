@@ -177,7 +177,8 @@ NSUID is worse than none.
 
 ## Unmapped results
 
-An unmapped target carries a `code`; see [result codes](reference.md#result-codes).
+An unmapped target carries a `code`; see [result codes](reference.md#result-codes)
+and [Mapping outcomes and failure reasons](mapping-outcomes.md).
 Observed examples:
 
 | Case                                                                       | `code`                                                     |

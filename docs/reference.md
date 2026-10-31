@@ -59,6 +59,10 @@ No code proves that a product is unavailable. Listings omit delisted products, s
 a delisted product appears as `no_candidates` or `no_match`; a title with a
 different application ID in the target region appears as `unresolved`.
 
+See [Mapping outcomes and failure reasons](mapping-outcomes.md) for cause
+categories, ambiguity examples and the distinction between mapping results and
+execution errors.
+
 ## Other methods
 
 | Method                                       | Returns                                                              |

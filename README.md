@@ -155,6 +155,7 @@ bun run example    # runs examples/basic.ts against the live endpoints
 
 - [How it works](docs/how-it-works.md): terms, Nintendo endpoints, steps per product type
 - [Reference](docs/reference.md): methods, options, result codes, errors, request costs, countries and regions
+- [Mapping outcomes and failure reasons](docs/mapping-outcomes.md): unmapped results, ambiguity causes, execution errors and review principles
 
 ## License
 

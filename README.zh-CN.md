@@ -135,6 +135,7 @@ bun run example    # 运行 examples/basic.ts，请求线上接口
 
 - [原理说明](docs/how-it-works.zh-CN.md)：术语、任天堂接口、各类商品的映射步骤
 - [参考文档](docs/reference.zh-CN.md)：方法、选项、结果代码、错误、请求次数、国家和地区
+- [映射结果与原因分类](docs/mapping-outcomes.zh-CN.md)：未映射结果、歧义成因、执行异常和复核原则
 
 ## 许可
 
