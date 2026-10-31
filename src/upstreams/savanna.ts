@@ -17,6 +17,7 @@ import { mergeHeaders } from '../headers.ts';
 import { parseRetryAfter } from '../retry.ts';
 import { requestWithRetry } from '../request.ts';
 import type { RequestOptions } from '../types.ts';
+import { isCatalogId } from '../ids.ts';
 
 export const SAVANNA_ENDPOINT = 'https://wb.lp1.savanna.srv.nintendo.net/graphql';
 
@@ -79,6 +80,23 @@ const TITLE_IDENTITY_FIELDS = `
   }
 `;
 
+/** Ordinary time tickets only; subscription products themselves remain unsupported. */
+const TIME_TICKET_FIELDS = `
+  ticketItemGroupId grantMinutes
+  subscriptionTicketItem {
+    __typename nsUid
+    ... on NormalSubscriptionTicketItem { grantMinutes }
+  }
+`;
+
+const TIME_TICKET_GROUP_FIELDS = `
+  id publisher { id }
+  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {
+    __typename nsUid
+    ... on NormalTicketItem { ${TIME_TICKET_FIELDS} }
+  }
+`;
+
 /**
  * One batch query covering every kind this package can map.
  *
@@ -104,6 +122,10 @@ query NsuidMapIdentity($shopId: Int!, $country: CountryCode!, $language: Languag
         targetApplicationItems(salesStatuses: [ONSALE, PRE_ORDER, SALES_TERMINATION, UNRELEASED]) {
           nsUid ${TITLE_IDENTITY_FIELDS}
         }
+      }
+      ... on NormalTicketItem {
+        ${TIME_TICKET_FIELDS}
+        ticketItemGroup { ${TIME_TICKET_GROUP_FIELDS} }
       }
     }
   }
@@ -163,7 +185,17 @@ export async function fetchAppIds(
 }
 
 /** Identity kinds, including products without a supported cross-region mapping. */
-export type IdentityKind = 'title' | 'dlc' | 'bundle' | 'demo' | 'consumable' | 'unknown';
+export type IdentityKind =
+  'title' | 'dlc' | 'bundle' | 'demo' | 'ticket' | 'consumable' | 'unknown';
+
+/** Limited ordinary time-ticket identity; group IDs are never translated or inferred. */
+export interface TimeTicketIdentity {
+  groupId: string;
+  publisherId: number;
+  grantMinutes: number;
+  /** Explicit null means no associated subscription; undefined is insufficient data. */
+  subscriptionMinutes: number | null;
+}
 
 /**
  * Stable category of why an nsuid cannot be mapped. The paired `reason` text is
@@ -211,6 +243,8 @@ export interface Identity {
   demos?: Array<{ nsuid: string; labelPlatform?: string }>;
   /** Demo only: the titles upstream says it belongs to, in the demo's own region. */
   parentTitles?: Identity[];
+  /** Ordinary time ticket only: exact group, publisher, duration and subscription relation. */
+  ticket?: TimeTicketIdentity;
   /** Category of why this nsuid cannot be mapped, when it cannot. */
   code?: MappingCode;
   /** Why this nsuid cannot be mapped, when it cannot. */
@@ -232,6 +266,111 @@ interface RawNode {
   itemsV2?: Array<{ item?: RawNode }>;
   demoItems?: Array<{ nsUid?: string | number; labelPlatform?: string } | null> | null;
   targetApplicationItems?: Array<RawNode | null> | null;
+  grantMinutes?: number | null;
+  ticketItemGroupId?: string | null;
+  ticketItemGroup?: RawTicketGroup | null;
+  subscriptionTicketItem?: RawNode | null;
+}
+
+interface RawTicketGroup {
+  id?: string | null;
+  publisher?: { id?: number | null } | null;
+  ticketItemsV2?: Array<RawNode | null> | null;
+}
+
+function positiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+function timeTicketIdentity(node: RawNode, group: RawTicketGroup | null | undefined): Identity {
+  const identity: Identity = { nsuid: String(node.nsUid), kind: 'ticket' };
+  const subscription = node.subscriptionTicketItem;
+  if (
+    node.__typename !== 'NormalTicketItem' ||
+    !isCatalogId(identity.nsuid) ||
+    !identity.nsuid.startsWith('7008') ||
+    typeof group?.id !== 'string' ||
+    !group.id.trim() ||
+    node.ticketItemGroupId !== group.id ||
+    !positiveInteger(group.publisher?.id) ||
+    !positiveInteger(node.grantMinutes) ||
+    (subscription !== null &&
+      (subscription?.__typename !== 'NormalSubscriptionTicketItem' ||
+        !isCatalogId(String(subscription.nsUid)) ||
+        !String(subscription.nsUid).startsWith('7008') ||
+        !positiveInteger(subscription.grantMinutes)))
+  ) {
+    return {
+      ...identity,
+      code: 'insufficient_identity',
+      reason:
+        'Ordinary time ticket has insufficient group, publisher, minutes or subscription identity',
+    };
+  }
+  return {
+    ...identity,
+    ticket: {
+      groupId: group.id,
+      publisherId: group.publisher.id,
+      grantMinutes: node.grantMinutes,
+      subscriptionMinutes: subscription === null ? null : subscription!.grantMinutes!,
+    },
+  };
+}
+
+/** Compare exact minutes; neither localized names nor region-local subscription NSUIDs match. */
+export function sameTimeTicket(a: TimeTicketIdentity, b: TimeTicketIdentity): boolean {
+  return (
+    a.groupId === b.groupId &&
+    a.publisherId === b.publisherId &&
+    a.grantMinutes === b.grantMinutes &&
+    a.subscriptionMinutes === b.subscriptionMinutes
+  );
+}
+
+function readTimeTicketGroup(group: RawTicketGroup) {
+  let tickets = Array.isArray(group.ticketItemsV2)
+    ? group.ticketItemsV2
+        .filter((node) => !node?.__typename || node.__typename === 'NormalTicketItem')
+        .map((node) => timeTicketIdentity(node ?? {}, group))
+    : undefined;
+  const seen = new Map<string, Identity>();
+  for (const ticket of tickets ?? []) {
+    const previous = seen.get(ticket.nsuid);
+    if (previous?.ticket && ticket.ticket && !sameTimeTicket(previous.ticket, ticket.ticket)) {
+      tickets = undefined;
+      break;
+    }
+    seen.set(ticket.nsuid, ticket);
+  }
+  return { id: group.id, publisherId: group.publisher?.id, tickets };
+}
+
+/** Query this exact group in the target context; missing or different groups never fall back to names. */
+export async function fetchTimeTicketGroup(
+  groupId: string,
+  country: string,
+  language: string,
+  options?: RequestOptions,
+) {
+  const data = await execute<{ item?: { ticketItemGroup?: RawTicketGroup | null } }>(
+    `query NsuidMapTimeTicketGroup($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $ticketItemGroupId: TicketItemGroupId!)
+@inContext(country: $country, language: $language, shopId: $shopId) {
+  item { ticketItemGroup(ticketItemGroupId: $ticketItemGroupId) { ${TIME_TICKET_GROUP_FIELDS} } }
+}`,
+    { shopId: SHOP_ID, country, language, ticketItemGroupId: groupId },
+    options,
+  );
+  const group = data.item?.ticketItemGroup;
+  if (group == null) return null;
+  const parsed = readTimeTicketGroup(group);
+  return {
+    ...parsed,
+    tickets:
+      typeof group.id === 'string' && group.id.trim() && positiveInteger(group.publisher?.id)
+        ? parsed.tickets
+        : undefined,
+  };
 }
 
 /** Resolve identity for a batch of nsuids in their own region's context. */
@@ -341,6 +480,37 @@ export async function fetchTitleCandidates(
 function toIdentity(node: RawNode): Identity {
   const nsuid = String(node.nsUid);
   switch (node.__typename) {
+    case 'NormalTicketItem': {
+      const identity = timeTicketIdentity(node, node.ticketItemGroup);
+      if (!identity.ticket) return identity;
+      const members = readTimeTicketGroup(node.ticketItemGroup!).tickets;
+      if (
+        !members ||
+        members.some((member) => !member.ticket) ||
+        !members.some(
+          (member) => member.nsuid === nsuid && sameTimeTicket(member.ticket!, identity.ticket!),
+        )
+      ) {
+        return {
+          ...identity,
+          code: 'insufficient_identity',
+          reason:
+            'The source ticket group does not provide a complete list containing this ticket identity',
+        };
+      }
+      const matches = new Set(
+        members
+          .filter((member) => sameTimeTicket(member.ticket!, identity.ticket!))
+          .map((member) => member.nsuid),
+      );
+      return matches.size > 1
+        ? {
+            ...identity,
+            code: 'ambiguous',
+            reason: `Ambiguous ordinary time ticket: ${matches.size} source tickets share its group, minutes and subscription identity`,
+          }
+        : identity;
+    }
     case 'ApplicationItem': {
       const appId = node.applications?.[0]?.id?.trim();
       const titleIds = [

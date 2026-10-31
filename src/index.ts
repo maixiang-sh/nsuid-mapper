@@ -12,7 +12,9 @@
  * Demos have neither; they map through their parent title when it lists exactly
  * one demo on the platform. Standalone consumables lack any anchor for target
  * discovery and remain unmapped. Consumable members can participate in bundle
- * identity using their itemId and publisher ID.
+ * identity using their itemId and publisher ID. Ordinary time tickets use the
+ * same group ID and publisher, exact grant minutes and subscription relation,
+ * requiring unique identities in both source and target groups.
  *
  * @example
  * ```ts
@@ -36,7 +38,12 @@ export {
 } from './client.ts';
 export { NsuidMapError } from './errors.ts';
 export type { NsuidMapping, RegionMapping, AppIdResolver } from './mapping.ts';
-export type { Identity, IdentityKind, MappingCode } from './upstreams/savanna.ts';
+export type {
+  Identity,
+  IdentityKind,
+  MappingCode,
+  TimeTicketIdentity,
+} from './upstreams/savanna.ts';
 export {
   deriveBaseApplicationIdFromDlcAppId,
   isAppId,

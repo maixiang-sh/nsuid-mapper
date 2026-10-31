@@ -26,19 +26,21 @@ POST https://wb.lp1.savanna.srv.nintendo.net/graphql
 
 使用的字段：
 
-| 字段                                  | 内容                                   | 用途                        |
-| ------------------------------------- | -------------------------------------- | --------------------------- |
-| `__typename`                          | 商品类型                               | 决定映射步骤                |
-| `applications.id`                     | Application ID                         | Redirector 的输入           |
-| `labelPlatform`                       | Platform                               | 比较                        |
-| `romRights.titleId`                   | ROM rights                             | 比较；定位 DLC 所属的 title |
-| `upgradeInfo`                         | Title 与其 Switch 2 Edition 之间的关联 | 定位另一个版本              |
-| `dlcItems`                            | Title 下的 DLC 和 bundle，每页 100 条  | DLC 与 bundle 的候选        |
-| `includedBundleItems`                 | 包含该 title 的 bundle                 | Bundle 的候选               |
-| `itemsV2`（bundle 上）                | Bundle 成员                            | Bundle 比较                 |
-| `demoItems`、`targetApplicationItems` | Title 的 demo；demo 所属的 title       | Demo 映射                   |
+| 字段                                     | 内容                                   | 用途                        |
+| ---------------------------------------- | -------------------------------------- | --------------------------- |
+| `__typename`                             | 商品类型                               | 决定映射步骤                |
+| `applications.id`                        | Application ID                         | Redirector 的输入           |
+| `labelPlatform`                          | Platform                               | 比较                        |
+| `romRights.titleId`                      | ROM rights                             | 比较；定位 DLC 所属的 title |
+| `upgradeInfo`                            | Title 与其 Switch 2 Edition 之间的关联 | 定位另一个版本              |
+| `dlcItems`                               | Title 下的 DLC 和 bundle，每页 100 条  | DLC 与 bundle 的候选        |
+| `includedBundleItems`                    | 包含该 title 的 bundle                 | Bundle 的候选               |
+| `itemsV2`（bundle 上）                   | Bundle 成员                            | Bundle 比较                 |
+| `demoItems`、`targetApplicationItems`    | Title 的 demo；demo 所属的 title       | Demo 映射                   |
+| `ticketItemGroup`、`ticketItemsV2`       | 票券组 ID、发行商和成员                | 普通时间券候选              |
+| `grantMinutes`、`subscriptionTicketItem` | 精确分钟数及关联订阅的分钟数           | 普通时间券比较              |
 
-Savanna 只支持按 NSUID 查询商品，不支持按 application ID 查询，因此无法单独定位其他商店的商品。
+Savanna 按 NSUID 查询商品，按组 ID 查询票券组。不支持按 application ID 查询，因此 title、DLC、bundle 和 demo 仍需 redirector 来定位其他商店的候选。
 
 ### `/apps` redirector
 
@@ -63,7 +65,7 @@ GET https://ec.nintendo.com/apps/{applicationId}/{country}
 
 ## 映射步骤
 
-所有商品类型都按相同的四步进行，只有第 3 步不同。
+Title、DLC、bundle 和 demo 按以下四步进行。普通时间券使用下文的票券组路径。
 
 ```mermaid
 flowchart TD
@@ -113,6 +115,19 @@ Demo 既没有 application ID，也没有 ROM rights。Savanna 提供了 demo �
 4. 返回同一 platform 上的 demo。
 
 这类依据弱于 ROM rights，因此要求源 title 和目标 title 在该 platform 上都只有一个 demo，且源 title 的这个 demo 必须就是源 demo 本身。源 title 没有列出 demo，或只列出其他 demo 时，返回 `insufficient_identity`。
+
+### 普通时间券
+
+仅支持 `NormalTicketItem`。目录兑换券、订阅票券本身及含票券的 bundle 仍不支持。
+
+1. 读取源票券的精确 `ticketItemGroupId`、嵌套组的 ID 和发行商、`grantMinutes`、`subscriptionTicketItem`（明确为 null，或关联订阅的精确分钟数）。源票券声明的组 ID 必须与嵌套组 ID 一致。
+2. 用 `[PUBLIC, UNSEARCHABLE]` 读取源组中的普通时间券。要求列表完整、包含源票券身份，且没有另一张不同 NSUID 的票券具有相同组、发行商、分钟数和订阅关联。否则在请求目标区前返回 `insufficient_identity` 或 `ambiguous`。
+3. 在目标区直接查询该组 ID，要求发行商相同、组内普通票券身份完整。不使用 redirector。
+4. 比较精确分钟数和订阅关联。恰好一个候选时返回 NSUID；多个候选返回 `ambiguous` 和排序后的 `candidates`；身份均不同返回 `no_match`；组缺失或普通时间券列表为空返回 `no_candidates`。
+
+同一 SKU 重复出现会去重，身份数据相互矛盾时视为不足。缺失字段不等同于 null，不把分钟数换算成月份。组 ID 是不透明标识，不推断不同地区组 ID 的对应关系，也不按名称匹配。权限与传输错误仍会抛出。
+
+2026-10-31 实测：Let's Sing VIP 的 525600 分钟券从 HK `70080000002063` 映射到 US `70080000002054`、GB `70080000002066`；43200 分钟源票券存在多张，保持歧义。Business Tour 的 AU 普通月券 `70080000001243` 映射到 US `70080000001247`，并保留订阅关联。录制见 `tests/fixtures/time-tickets.json`。
 
 ## 名称
 

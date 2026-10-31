@@ -26,23 +26,24 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 ```
 
 - 找到商品时有 `nsuid`，否则有 `code` 和 `reason`。程序应根据 `code` 判断（见[结果代码](#结果代码)）；`reason` 的措辞可能调整。
-- `candidates` 只在 `ambiguous` 时出现：所有匹配成功的目标 NSUID，已排序。冲突不在目标区同类商品之间时不出现，例如 demo 的源 title 有多个 demo，或 demo 的父 title 本身有歧义；这时由 `reason` 写出相关 NSUID。
-- `source.kind`：`title`、`dlc`、`bundle`、`demo`、`consumable` 或 `unknown`。
+- `candidates` 只在 `ambiguous` 时出现：所有匹配成功的目标 NSUID，已排序。冲突不在目标区同类商品之间时不出现，例如 demo 的源 title 有多个 demo、demo 的父 title 本身有歧义，或源区同组有多张身份相同的时间券。
+- `source.kind`：`title`、`dlc`、`bundle`、`demo`、`ticket`、`consumable` 或 `unknown`。
 - 源商品无法映射时，`source` 带有相同的 `code` 和 `reason`，且不会请求任何目标。
 - `source` 的其他字段是用于比较的身份数据：application ID、platform、ROM rights 和 bundle 成员。
+- 普通时间券的 `source.ticket` 包含 `groupId`、`publisherId`、`grantMinutes`、`subscriptionMinutes`；最后一项在明确没有订阅关联时为 null，否则为关联订阅票券的精确分钟数。
 
 ## 结果代码
 
-| `code`                  | 含义                                                                    |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `source_not_found`      | 源商店没有返回该 NSUID，它可能属于其他商店。                            |
-| `unsupported`           | 不支持的类型：consumable、ticket、未知类型，或含有不支持成员的 bundle。 |
-| `insufficient_identity` | Savanna 缺少比较所需的数据，例如 platform 或 ROM rights。               |
-| `unresolved`            | Redirector 在目标商店中没有返回该 application ID 对应的商品。           |
-| `no_candidates`         | 目标商店没有返回任何候选。                                              |
-| `no_match`              | 返回了候选，但没有身份相同的。                                          |
-| `ambiguous`             | 无法确定唯一商品；见 `candidates` 和 `reason`。                         |
-| `incomplete`            | 查找在完成前达到上限。                                                  |
+| `code`                  | 含义                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| `source_not_found`      | 源商店没有返回该 NSUID，它可能属于其他商店。                                          |
+| `unsupported`           | 不支持的类型：consumable、目录兑换券、订阅票券、未知类型，或含有不支持成员的 bundle。 |
+| `insufficient_identity` | Savanna 缺少比较所需的数据，例如 platform 或 ROM rights。                             |
+| `unresolved`            | Redirector 在目标商店中没有返回该 application ID 对应的商品。                         |
+| `no_candidates`         | 目标商店没有返回任何候选。                                                            |
+| `no_match`              | 返回了候选，但没有身份相同的。                                                        |
+| `ambiguous`             | 无法确定唯一商品；见 `candidates` 和 `reason`。                                       |
+| `incomplete`            | 查找在完成前达到上限。                                                                |
 
 任何 `code` 都不能证明商品在目标商店中没有销售。列表中不包含已下架的商品，所以已下架的商品会表现为 `no_candidates` 或 `no_match`；在目标商店使用不同 application ID 的 title 会表现为 `unresolved`。
 
@@ -127,12 +128,15 @@ new NsuidMapper({
 | Title、demo | 1 次 redirector + 1 次 Savanna                                                 |
 | DLC         | 每个所属 title 1 次 redirector + 每 100 个 DLC 1 次 Savanna                    |
 | Bundle      | 每个所属 title 1 次 redirector + 每个 title 及其关联版本每 100 条 1 次 Savanna |
+| 普通时间券  | 1 次 Savanna 票券组查询，不使用 redirector                                     |
 
 大多数商品只有一个所属 title，所以大多数映射每个目标需要 2 次请求。各目标之间并发，同一目标内的请求依次发送。每次查找最多读取 16 个所属 title，每个 title 最多 40 页。
 
 ## 国家和地区
 
 基于 2026-07-23 的一次测试：使用四款广泛发售的 title，测试了 Savanna 支持的全部 92 个国家和地区。任天堂可能随时调整。受支持不代表每个商品都在当地销售。
+
+下表与 `isMappable` 描述 redirector 的覆盖范围。普通时间券直接查询 Savanna，要求目标区能读取相同组 ID 和发行商的票券组；尚未逐国验证其覆盖范围。
 
 ### 支持（45 个）
 

@@ -1,0 +1,420 @@
+{
+  "note": "Anonymous read-only Nintendo responses recorded 2026-10-31. Expected NSUIDs were independently checked before mapper implementation.",
+  "samples": [
+    {
+      "request": {
+        "query": "\nquery NsuidMapIdentity($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $nsUids: [NsUid!]!)\n@inContext(country: $country, language: $language, shopId: $shopId) {\n  item {\n    itemsV2(nsUids: $nsUids) {\n      __typename nsUid\n      ... on ApplicationItem { \n  \n  applications { id } labelPlatform romRights { titleId }\n  demoItems { nsUid labelPlatform }\n\n  upgradeInfo {\n    baseApplicationItem { nsUid }\n    upgradeApplicationItem { nsUid }\n  }\n }\n      ... on DlcItem { labelPlatform romRights { titleId } }\n      ... on BundleItem { \n  nsUid labelPlatform romRights { titleId }\n  itemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    item {\n      __typename\n      ... on ApplicationItem { labelPlatform applications { id } romRights { titleId } }\n      ... on DlcItem { labelPlatform romRights { titleId } }\n      ... on ConsumableItemV2 { itemId consumableItemGroup { publisher { id } } }\n    }\n  }\n }\n      ... on DemoItem {\n        labelPlatform\n        targetApplicationItems(salesStatuses: [ONSALE, PRE_ORDER, SALES_TERMINATION, UNRELEASED]) {\n          nsUid \n  \n  applications { id } labelPlatform romRights { titleId }\n  demoItems { nsUid labelPlatform }\n\n  upgradeInfo {\n    baseApplicationItem { nsUid }\n    upgradeApplicationItem { nsUid }\n  }\n\n        }\n      }\n      ... on NormalTicketItem {\n        \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n\n        ticketItemGroup { \n  id publisher { id }\n  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    __typename nsUid\n    ... on NormalTicketItem { \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n }\n  }\n }\n      }\n    }\n  }\n}\n",
+        "variables": {
+          "shopId": 3,
+          "country": "HK",
+          "language": "zh",
+          "nsUids": [70080000002063]
+        }
+      },
+      "response": {
+        "data": {
+          "item": {
+            "itemsV2": [
+              {
+                "__typename": "NormalTicketItem",
+                "nsUid": 70080000002063,
+                "ticketItemGroupId": "47c8fdb7cec2769c",
+                "grantMinutes": 525600,
+                "subscriptionTicketItem": null,
+                "ticketItemGroup": {
+                  "id": "47c8fdb7cec2769c",
+                  "publisher": {
+                    "id": 368
+                  },
+                  "ticketItemsV2": [
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002057,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002136,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002293,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002060,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 129600,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002063,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 525600,
+                      "subscriptionTicketItem": null
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "recordedAt": "2026-10-31T05:15:16.041Z"
+    },
+    {
+      "request": {
+        "query": "query NsuidMapTimeTicketGroup($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $ticketItemGroupId: TicketItemGroupId!)\n@inContext(country: $country, language: $language, shopId: $shopId) {\n  item { ticketItemGroup(ticketItemGroupId: $ticketItemGroupId) { \n  id publisher { id }\n  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    __typename nsUid\n    ... on NormalTicketItem { \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n }\n  }\n } }\n}",
+        "variables": {
+          "shopId": 3,
+          "country": "US",
+          "language": "en",
+          "ticketItemGroupId": "47c8fdb7cec2769c"
+        }
+      },
+      "response": {
+        "data": {
+          "item": {
+            "ticketItemGroup": {
+              "id": "47c8fdb7cec2769c",
+              "publisher": {
+                "id": 368
+              },
+              "ticketItemsV2": [
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002052,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 43200,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002133,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 43200,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002299,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 43200,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002137,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 86400,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002053,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 129600,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002054,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 525600,
+                  "subscriptionTicketItem": null
+                }
+              ]
+            }
+          }
+        }
+      },
+      "recordedAt": "2026-10-31T05:15:16.715Z"
+    },
+    {
+      "request": {
+        "query": "query NsuidMapTimeTicketGroup($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $ticketItemGroupId: TicketItemGroupId!)\n@inContext(country: $country, language: $language, shopId: $shopId) {\n  item { ticketItemGroup(ticketItemGroupId: $ticketItemGroupId) { \n  id publisher { id }\n  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    __typename nsUid\n    ... on NormalTicketItem { \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n }\n  }\n } }\n}",
+        "variables": {
+          "shopId": 3,
+          "country": "GB",
+          "language": "en",
+          "ticketItemGroupId": "47c8fdb7cec2769c"
+        }
+      },
+      "response": {
+        "data": {
+          "item": {
+            "ticketItemGroup": {
+              "id": "47c8fdb7cec2769c",
+              "publisher": {
+                "id": 368
+              },
+              "ticketItemsV2": [
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002132,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 43200,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002064,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 43200,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002065,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 129600,
+                  "subscriptionTicketItem": null
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000002066,
+                  "ticketItemGroupId": "47c8fdb7cec2769c",
+                  "grantMinutes": 525600,
+                  "subscriptionTicketItem": null
+                }
+              ]
+            }
+          }
+        }
+      },
+      "recordedAt": "2026-10-31T05:15:17.345Z"
+    },
+    {
+      "request": {
+        "query": "\nquery NsuidMapIdentity($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $nsUids: [NsUid!]!)\n@inContext(country: $country, language: $language, shopId: $shopId) {\n  item {\n    itemsV2(nsUids: $nsUids) {\n      __typename nsUid\n      ... on ApplicationItem { \n  \n  applications { id } labelPlatform romRights { titleId }\n  demoItems { nsUid labelPlatform }\n\n  upgradeInfo {\n    baseApplicationItem { nsUid }\n    upgradeApplicationItem { nsUid }\n  }\n }\n      ... on DlcItem { labelPlatform romRights { titleId } }\n      ... on BundleItem { \n  nsUid labelPlatform romRights { titleId }\n  itemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    item {\n      __typename\n      ... on ApplicationItem { labelPlatform applications { id } romRights { titleId } }\n      ... on DlcItem { labelPlatform romRights { titleId } }\n      ... on ConsumableItemV2 { itemId consumableItemGroup { publisher { id } } }\n    }\n  }\n }\n      ... on DemoItem {\n        labelPlatform\n        targetApplicationItems(salesStatuses: [ONSALE, PRE_ORDER, SALES_TERMINATION, UNRELEASED]) {\n          nsUid \n  \n  applications { id } labelPlatform romRights { titleId }\n  demoItems { nsUid labelPlatform }\n\n  upgradeInfo {\n    baseApplicationItem { nsUid }\n    upgradeApplicationItem { nsUid }\n  }\n\n        }\n      }\n      ... on NormalTicketItem {\n        \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n\n        ticketItemGroup { \n  id publisher { id }\n  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    __typename nsUid\n    ... on NormalTicketItem { \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n }\n  }\n }\n      }\n    }\n  }\n}\n",
+        "variables": {
+          "shopId": 3,
+          "country": "AU",
+          "language": "en",
+          "nsUids": [70080000001243]
+        }
+      },
+      "response": {
+        "data": {
+          "item": {
+            "itemsV2": [
+              {
+                "__typename": "NormalTicketItem",
+                "nsUid": 70080000001243,
+                "ticketItemGroupId": "21c207bbdc439909",
+                "grantMinutes": 43200,
+                "subscriptionTicketItem": {
+                  "__typename": "NormalSubscriptionTicketItem",
+                  "nsUid": 70080000001244,
+                  "grantMinutes": 43200
+                },
+                "ticketItemGroup": {
+                  "id": "21c207bbdc439909",
+                  "publisher": {
+                    "id": 1361
+                  },
+                  "ticketItemsV2": [
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000001261,
+                      "ticketItemGroupId": "21c207bbdc439909",
+                      "grantMinutes": 10080,
+                      "subscriptionTicketItem": {
+                        "__typename": "NormalSubscriptionTicketItem",
+                        "nsUid": 70080000001244,
+                        "grantMinutes": 43200
+                      }
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000001243,
+                      "ticketItemGroupId": "21c207bbdc439909",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": {
+                        "__typename": "NormalSubscriptionTicketItem",
+                        "nsUid": 70080000001244,
+                        "grantMinutes": 43200
+                      }
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000001242,
+                      "ticketItemGroupId": "21c207bbdc439909",
+                      "grantMinutes": 259200,
+                      "subscriptionTicketItem": {
+                        "__typename": "NormalSubscriptionTicketItem",
+                        "nsUid": 70080000001182,
+                        "grantMinutes": 259200
+                      }
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000001245,
+                      "ticketItemGroupId": "21c207bbdc439909",
+                      "grantMinutes": 518400,
+                      "subscriptionTicketItem": {
+                        "__typename": "NormalSubscriptionTicketItem",
+                        "nsUid": 70080000001246,
+                        "grantMinutes": 518400
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "recordedAt": "2026-10-31T05:15:18.889Z"
+    },
+    {
+      "request": {
+        "query": "query NsuidMapTimeTicketGroup($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $ticketItemGroupId: TicketItemGroupId!)\n@inContext(country: $country, language: $language, shopId: $shopId) {\n  item { ticketItemGroup(ticketItemGroupId: $ticketItemGroupId) { \n  id publisher { id }\n  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    __typename nsUid\n    ... on NormalTicketItem { \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n }\n  }\n } }\n}",
+        "variables": {
+          "shopId": 3,
+          "country": "US",
+          "language": "en",
+          "ticketItemGroupId": "21c207bbdc439909"
+        }
+      },
+      "response": {
+        "data": {
+          "item": {
+            "ticketItemGroup": {
+              "id": "21c207bbdc439909",
+              "publisher": {
+                "id": 1361
+              },
+              "ticketItemsV2": [
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000001281,
+                  "ticketItemGroupId": "21c207bbdc439909",
+                  "grantMinutes": 10080,
+                  "subscriptionTicketItem": {
+                    "__typename": "NormalSubscriptionTicketItem",
+                    "nsUid": 70080000001248,
+                    "grantMinutes": 43200
+                  }
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000001247,
+                  "ticketItemGroupId": "21c207bbdc439909",
+                  "grantMinutes": 43200,
+                  "subscriptionTicketItem": {
+                    "__typename": "NormalSubscriptionTicketItem",
+                    "nsUid": 70080000001248,
+                    "grantMinutes": 43200
+                  }
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000001249,
+                  "ticketItemGroupId": "21c207bbdc439909",
+                  "grantMinutes": 259200,
+                  "subscriptionTicketItem": {
+                    "__typename": "NormalSubscriptionTicketItem",
+                    "nsUid": 70080000001250,
+                    "grantMinutes": 259200
+                  }
+                },
+                {
+                  "__typename": "NormalTicketItem",
+                  "nsUid": 70080000001262,
+                  "ticketItemGroupId": "21c207bbdc439909",
+                  "grantMinutes": 518400,
+                  "subscriptionTicketItem": {
+                    "__typename": "NormalSubscriptionTicketItem",
+                    "nsUid": 70080000001263,
+                    "grantMinutes": 518400
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "recordedAt": "2026-10-31T05:15:19.267Z"
+    },
+    {
+      "request": {
+        "query": "\nquery NsuidMapIdentity($shopId: Int!, $country: CountryCode!, $language: LanguageCode!, $nsUids: [NsUid!]!)\n@inContext(country: $country, language: $language, shopId: $shopId) {\n  item {\n    itemsV2(nsUids: $nsUids) {\n      __typename nsUid\n      ... on ApplicationItem { \n  \n  applications { id } labelPlatform romRights { titleId }\n  demoItems { nsUid labelPlatform }\n\n  upgradeInfo {\n    baseApplicationItem { nsUid }\n    upgradeApplicationItem { nsUid }\n  }\n }\n      ... on DlcItem { labelPlatform romRights { titleId } }\n      ... on BundleItem { \n  nsUid labelPlatform romRights { titleId }\n  itemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    item {\n      __typename\n      ... on ApplicationItem { labelPlatform applications { id } romRights { titleId } }\n      ... on DlcItem { labelPlatform romRights { titleId } }\n      ... on ConsumableItemV2 { itemId consumableItemGroup { publisher { id } } }\n    }\n  }\n }\n      ... on DemoItem {\n        labelPlatform\n        targetApplicationItems(salesStatuses: [ONSALE, PRE_ORDER, SALES_TERMINATION, UNRELEASED]) {\n          nsUid \n  \n  applications { id } labelPlatform romRights { titleId }\n  demoItems { nsUid labelPlatform }\n\n  upgradeInfo {\n    baseApplicationItem { nsUid }\n    upgradeApplicationItem { nsUid }\n  }\n\n        }\n      }\n      ... on NormalTicketItem {\n        \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n\n        ticketItemGroup { \n  id publisher { id }\n  ticketItemsV2(publicStatuses: [PUBLIC, UNSEARCHABLE]) {\n    __typename nsUid\n    ... on NormalTicketItem { \n  ticketItemGroupId grantMinutes\n  subscriptionTicketItem {\n    __typename nsUid\n    ... on NormalSubscriptionTicketItem { grantMinutes }\n  }\n }\n  }\n }\n      }\n    }\n  }\n}\n",
+        "variables": {
+          "shopId": 3,
+          "country": "HK",
+          "language": "zh",
+          "nsUids": [70080000002057]
+        }
+      },
+      "response": {
+        "data": {
+          "item": {
+            "itemsV2": [
+              {
+                "__typename": "NormalTicketItem",
+                "nsUid": 70080000002057,
+                "ticketItemGroupId": "47c8fdb7cec2769c",
+                "grantMinutes": 43200,
+                "subscriptionTicketItem": null,
+                "ticketItemGroup": {
+                  "id": "47c8fdb7cec2769c",
+                  "publisher": {
+                    "id": 368
+                  },
+                  "ticketItemsV2": [
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002057,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002136,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002293,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 43200,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002060,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 129600,
+                      "subscriptionTicketItem": null
+                    },
+                    {
+                      "__typename": "NormalTicketItem",
+                      "nsUid": 70080000002063,
+                      "ticketItemGroupId": "47c8fdb7cec2769c",
+                      "grantMinutes": 525600,
+                      "subscriptionTicketItem": null
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "recordedAt": "2026-10-31T05:15:20.755Z"
+    }
+  ]
+}

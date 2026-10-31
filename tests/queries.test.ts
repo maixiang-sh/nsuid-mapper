@@ -4,7 +4,7 @@ import { fetchIdentities, fetchRelatedItems } from '../src/upstreams/savanna.ts'
 // Minimal selections verified in the AU public catalog on 2026-10-11.
 const tickets = [
   { __typename: 'CatalogTicketItem', nsUid: 70020000000141 },
-  { __typename: 'NormalTicketItem', nsUid: 70080000001243 },
+  { __typename: 'NormalSubscriptionTicketItem', nsUid: 70080000001244 },
 ];
 
 test('valid ticket types are unsupported, distinct from an omitted catalog product', async () => {

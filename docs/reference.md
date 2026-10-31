@@ -32,25 +32,28 @@ Result:
 - `candidates` appears only with `ambiguous`: the target NSUIDs that all matched,
   sorted. It is absent when the conflict is not between target products of the
   same kind — a demo whose source title lists several demos, or whose
-  parent title is itself ambiguous; `reason` names those NSUIDs instead.
-- `source.kind`: `title`, `dlc`, `bundle`, `demo`, `consumable` or `unknown`.
+  parent title is itself ambiguous, or an ambiguous source ticket group.
+- `source.kind`: `title`, `dlc`, `bundle`, `demo`, `ticket`, `consumable` or `unknown`.
 - If the source cannot be mapped, `source` has the same `code` and `reason`, and no
   target is requested.
 - Other `source` fields hold the identity used for comparison: application ID,
   platform, ROM rights and bundle members.
+- `source.ticket` holds an ordinary time ticket's `groupId`, `publisherId`,
+  `grantMinutes` and `subscriptionMinutes`. The latter is null when there is
+  explicitly no associated subscription, otherwise its exact grant minutes.
 
 ## Result codes
 
-| `code`                  | Meaning                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------- |
-| `source_not_found`      | The source store did not return the NSUID; it may belong to another store.                  |
-| `unsupported`           | Unsupported type: consumable, ticket, unknown type, or a bundle with an unsupported member. |
-| `insufficient_identity` | Savanna omitted data needed for comparison, such as platform or ROM rights.                 |
-| `unresolved`            | The redirector returned no product for the application ID in the target store.              |
-| `no_candidates`         | The target store returned no candidates.                                                    |
-| `no_match`              | Candidates were returned; none has the same identity.                                       |
-| `ambiguous`             | No single product can be picked; see `candidates` and `reason`.                             |
-| `incomplete`            | A search reached a limit before finishing.                                                  |
+| `code`                  | Meaning                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `source_not_found`      | The source store did not return the NSUID; it may belong to another store.                                                |
+| `unsupported`           | Unsupported type: consumable, catalog voucher, subscription ticket, unknown type, or a bundle with an unsupported member. |
+| `insufficient_identity` | Savanna omitted data needed for comparison, such as platform or ROM rights.                                               |
+| `unresolved`            | The redirector returned no product for the application ID in the target store.                                            |
+| `no_candidates`         | The target store returned no candidates.                                                                                  |
+| `no_match`              | Candidates were returned; none has the same identity.                                                                     |
+| `ambiguous`             | No single product can be picked; see `candidates` and `reason`.                                                           |
+| `incomplete`            | A search reached a limit before finishing.                                                                                |
 
 No code proves that a product is unavailable. Listings omit delisted products, so
 a delisted product appears as `no_candidates` or `no_match`; a title with a
@@ -145,11 +148,12 @@ throws. To keep the other results, map each target separately with the
 
 `mapNsuid` sends one Savanna request for the source, then per target:
 
-| Type        | Requests per target                                                                         |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| Title, demo | 1 redirector + 1 Savanna                                                                    |
-| DLC         | 1 redirector per parent title + 1 Savanna per 100 listed DLC                                |
-| Bundle      | 1 redirector per parent title + 1 Savanna per 100 listed items per title and linked edition |
+| Type                 | Requests per target                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| Title, demo          | 1 redirector + 1 Savanna                                                                    |
+| DLC                  | 1 redirector per parent title + 1 Savanna per 100 listed DLC                                |
+| Bundle               | 1 redirector per parent title + 1 Savanna per 100 listed items per title and linked edition |
+| Ordinary time ticket | 1 Savanna group query; no redirector                                                        |
 
 Most products have one parent title, so most mappings need 2 requests per target.
 Targets run concurrently; requests within a target run sequentially. A
@@ -160,6 +164,10 @@ search reads at most 16 parent titles and 40 pages per title.
 Based on a 2026-07-23 test of all 92 countries and regions Savanna serves, using
 four widely released titles. Nintendo may change this at any time. Support does
 not guarantee that every product is sold there.
+
+The table and `isMappable` describe redirector coverage. Ordinary time tickets
+query Savanna directly and require a readable group with the same ID and
+publisher; their coverage has not been measured across all countries.
 
 ### Supported (45)
 

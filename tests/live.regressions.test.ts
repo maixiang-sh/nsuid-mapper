@@ -69,10 +69,7 @@ live(
   60_000,
 );
 
-for (const [id, typename] of [
-  ['70020000000141', 'CatalogTicketItem'],
-  ['70080000001243', 'NormalTicketItem'],
-] as const) {
+for (const [id, typename] of [['70020000000141', 'CatalogTicketItem']] as const) {
   live(
     `real AU ticket is unsupported rather than missing: ${id}`,
     async () => {
@@ -88,6 +85,48 @@ for (const [id, typename] of [
     60_000,
   );
 }
+
+for (const [id, from, to, expected] of [
+  ['70080000002063', 'HK', ['US', 'GB'], ['70080000002054', '70080000002066']],
+  ['70080000002054', 'US', ['HK'], ['70080000002063']],
+  ['70080000001243', 'AU', ['US'], ['70080000001247']],
+] as const) {
+  live(
+    `ordinary time-ticket group identity: ${id} ${from} → ${to.join('/')}`,
+    async () => {
+      const result = await new NsuidMapper({ timeoutMs: 15_000 }).mapNsuid(id, {
+        from,
+        to: [...to],
+      });
+      expect(result.source.kind).toBe('ticket');
+      expect(result.source.code).toBeUndefined();
+      expect(result.targets.map((t) => t.nsuid)).toEqual([...expected]);
+    },
+    60_000,
+  );
+}
+
+live(
+  'ordinary time tickets with duplicate source identity remain ambiguous without target requests',
+  async () => {
+    let requests = 0;
+    const result = await new NsuidMapper({
+      timeoutMs: 15_000,
+      fetch: (async (url, init) => {
+        requests++;
+        return fetch(url, init);
+      }) as typeof fetch,
+    }).mapNsuid('70080000002057', { from: 'HK', to: ['US', 'GB'] });
+    expect(requests).toBe(1);
+    expect(result.source.code).toBe('ambiguous');
+    for (const target of result.targets) {
+      expect(target.code).toBe('ambiguous');
+      expect(target.nsuid).toBeUndefined();
+      expect(target.candidates).toBeUndefined();
+    }
+  },
+  60_000,
+);
 
 for (const withBundles of [false, true]) {
   live(

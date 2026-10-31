@@ -29,20 +29,23 @@ returns nothing from the US store.
 
 Fields used:
 
-| Field                                 | Content                                        | Purpose                            |
-| ------------------------------------- | ---------------------------------------------- | ---------------------------------- |
-| `__typename`                          | Product type                                   | Selects the mapping steps          |
-| `applications.id`                     | Application ID                                 | Input to the redirector            |
-| `labelPlatform`                       | Platform                                       | Comparison                         |
-| `romRights.titleId`                   | ROM rights                                     | Comparison; locating a DLC's title |
-| `upgradeInfo`                         | Links between a title and its Switch 2 Edition | Locating the other edition         |
-| `dlcItems`                            | A title's DLC and bundles, 100 per page        | DLC and bundle candidates          |
-| `includedBundleItems`                 | Bundles containing the title                   | Bundle candidates                  |
-| `itemsV2` (on a bundle)               | Bundle members                                 | Bundle comparison                  |
-| `demoItems`, `targetApplicationItems` | A title's demos; a demo's title                | Demo mapping                       |
+| Field                                    | Content                                          | Purpose                            |
+| ---------------------------------------- | ------------------------------------------------ | ---------------------------------- |
+| `__typename`                             | Product type                                     | Selects the mapping steps          |
+| `applications.id`                        | Application ID                                   | Input to the redirector            |
+| `labelPlatform`                          | Platform                                         | Comparison                         |
+| `romRights.titleId`                      | ROM rights                                       | Comparison; locating a DLC's title |
+| `upgradeInfo`                            | Links between a title and its Switch 2 Edition   | Locating the other edition         |
+| `dlcItems`                               | A title's DLC and bundles, 100 per page          | DLC and bundle candidates          |
+| `includedBundleItems`                    | Bundles containing the title                     | Bundle candidates                  |
+| `itemsV2` (on a bundle)                  | Bundle members                                   | Bundle comparison                  |
+| `demoItems`, `targetApplicationItems`    | A title's demos; a demo's title                  | Demo mapping                       |
+| `ticketItemGroup`, `ticketItemsV2`       | Ticket group ID, publisher and members           | Ordinary time-ticket candidates    |
+| `grantMinutes`, `subscriptionTicketItem` | Exact ticket and associated subscription minutes | Ordinary time-ticket comparison    |
 
-Savanna looks products up by NSUID only. It has no lookup by application ID, so
-it cannot locate a product in another store on its own.
+Savanna looks products up by NSUID and ticket groups by group ID. It has no
+lookup by application ID; titles, DLC, bundles and demos need the redirector to
+locate candidates in another store.
 
 ### The `/apps` redirector
 
@@ -72,7 +75,8 @@ public way from an application ID to an NSUID. Limitations:
 
 ## Mapping steps
 
-All product types follow the same four steps; only step 3 differs.
+Titles, DLC, bundles and demos follow these four steps. Ordinary time tickets
+use the group-based path described below.
 
 ```mermaid
 flowchart TD
@@ -135,6 +139,35 @@ This evidence is weaker than ROM rights, so a result requires both the source
 and the target title to list exactly one demo on that platform, and the source
 title's demo must be the source demo itself. A source title that lists no demo,
 or only other demos, returns `insufficient_identity`.
+
+### Ordinary time tickets
+
+Only `NormalTicketItem` products are supported. Catalog vouchers and subscription
+products themselves remain unsupported, including as bundle members.
+
+1. Read the source's exact `ticketItemGroupId`, the nested group's ID and publisher,
+   `grantMinutes`, and `subscriptionTicketItem` (explicit null, or the associated
+   subscription's exact minutes). The two source group IDs must agree.
+2. Read the source group's ordinary tickets using `[PUBLIC, UNSEARCHABLE]`. Require
+   a complete list containing the source identity and no other distinct SKU with
+   the same group, publisher, minutes and subscription relation. Otherwise stop
+   before requesting any target, with `insufficient_identity` or `ambiguous`.
+3. Query that exact group ID in the target country. Require its publisher to agree,
+   and all ordinary-ticket identities to be complete. This uses no redirector.
+4. Compare exact grant minutes and subscription relation. Return one unique
+   matching NSUID, `ambiguous` with sorted candidates for several, `no_match` for
+   no matching identity, or `no_candidates` for an absent group or empty list.
+
+Repeated appearances of the same SKU are deduplicated; conflicting identity
+data is insufficient. Missing fields never stand for null, and minutes are not
+converted to months. Group IDs are opaque: a different regional ID is not
+translated or matched by name. Permission and transport errors still propagate.
+
+Verified 2026-10-31: Let's Sing VIP's 525600-minute pass maps HK
+`70080000002063` to US `70080000002054` and GB `70080000002066`. Its 43200-minute
+source passes are ambiguous. Business Tour's AU ordinary monthly ticket
+`70080000001243` maps to US `70080000001247`, retaining its subscription relation.
+Recordings are in `tests/fixtures/time-tickets.json`.
 
 ## Names
 

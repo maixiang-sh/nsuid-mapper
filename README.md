@@ -34,6 +34,10 @@ For each target, the redirector locates candidate products, and their
 Savanna data is compared with the source product. A result is returned only when
 exactly one candidate has the same identity. Names are never compared.
 
+Ordinary time tickets query the same ticket group directly in the target store.
+They compare publisher, exact minutes and subscription relation, requiring a
+unique identity in both source and target groups.
+
 See [How it works](docs/how-it-works.md) for the endpoints and each step.
 
 ## Quick start
@@ -89,14 +93,15 @@ import { NsuidMapper } from 'nsuid-mapper/source';
 
 ## Supported products
 
-| NSUID prefix   | Type       | Supported                                         |
-| -------------- | ---------- | ------------------------------------------------- |
-| `7001`         | Title      | Yes                                               |
-| `7005`         | DLC        | Yes                                               |
-| `7007`         | Bundle     | Yes                                               |
-| `7003`         | Demo       | Yes, if its title lists one demo on that platform |
-| `7009`         | Consumable | No                                                |
-| `7002`, `7008` | Ticket     | No                                                |
+| NSUID prefix   | Type                 | Supported                                                                                     |
+| -------------- | -------------------- | --------------------------------------------------------------------------------------------- |
+| `7001`         | Title                | Yes                                                                                           |
+| `7005`         | DLC                  | Yes                                                                                           |
+| `7007`         | Bundle               | Yes                                                                                           |
+| `7003`         | Demo                 | Yes, if its title lists one demo on that platform                                             |
+| `7009`         | Consumable           | No                                                                                            |
+| `7008`         | Ordinary time ticket | Limited: same group, publisher, exact minutes and subscription relation; unique on both sides |
+| `7002`, `7008` | Other tickets        | Catalog vouchers and subscription products themselves are unsupported                         |
 
 A product sold in both places may still be unmapped. The result then gives the
 reason instead of a guess. Common causes:
@@ -112,6 +117,10 @@ reason instead of a guess. Common causes:
 of Europe. KR, TW, mainland China, Southeast Asia, parts of the Middle East and
 Latin America, and the Caribbean are not: the redirector returns no product page
 there. See the [full list](docs/reference.md#countries-and-regions).
+
+This coverage describes products using the redirector. Ordinary time tickets
+bypass it and require the same readable group ID, publisher and complete ticket
+identity in the target store. Different regional group IDs are never inferred.
 
 Each is identified by a two-letter ISO code such as `JP`, `US` or `GB`. One call
 accepts up to 8 targets.

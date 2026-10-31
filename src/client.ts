@@ -142,7 +142,7 @@ export class NsuidMapper {
    * works (see {@link NsuidMapper.resolveNsuidsToAppIds}).
    *
    * @returns the appId, or `null` for a kind that has none — bundles carry no
-   * appId of their own, and demos and consumables have none at all.
+   * appId of their own, and demos, tickets and consumables have none at all.
    */
   async resolveNsuidToAppId(
     nsuid: string | number,
@@ -163,7 +163,7 @@ export class NsuidMapper {
    * Split large lists into modest sequential batches, for example 100 IDs.
    *
    * Every nsuid asked for appears in the result. A `null` value means the kind
-   * has no application id (bundle, demo, consumable) or the nsuid is not sold
+   * has no application id (bundle, demo, ticket, consumable) or the nsuid is not sold
    * in that region — both are answers, not failures.
    *
    * All the nsuids must belong to the same catalog. There are four, not
@@ -187,8 +187,9 @@ export class NsuidMapper {
    * Map one nsuid into other regions.
    *
    * Works for `title`, `dlc` and `bundle`, each anchored on an id upstream
-   * provides, and for a `demo` through its parent title. A `consumable` comes
-   * back with every target unmapped and a reason — nothing lists it under a title.
+   * provides, for a `demo` through its parent title, and for an ordinary time
+   * `ticket` through its exact group and duration. A `consumable` comes
+   * back with every target unmapped and a reason — target discovery can be restricted.
    * Consumable itemId is used for bundle members, not standalone mapping.
    *
    * One nsuid per call, by design. Target countries fire together, so a batch

@@ -6,7 +6,7 @@
  * 16-hex application id into that region's store URL — and the URL carries the
  * region's nsuid.
  *
- * Four kinds map, each anchored on an id upstream itself provides:
+ * Five kinds map, each anchored on an id upstream itself provides:
  *
  * | kind   | identity                          | target candidates                   |
  * | ------ | --------------------------------- | ----------------------------------- |
@@ -14,9 +14,10 @@
  * | dlc    | platform and full rights          | parent's DLC and upgrade list       |
  * | bundle | platform, rights and all members  | all linked parents, unique SKU      |
  * | demo   | parent title, platform, sole demo | the mapped parent title's demo list |
+ * | ticket | group, publisher, exact minutes and subscription relation | the same group in the target context |
  *
  * Nothing here matches on names. A `consumable` carries no application id and
- * no title lists it, so it is reported unmapped rather than guessed at — a
+ * target group discovery can be restricted, so it is reported unmapped — a
  * wrong nsuid is worse than an honest null.
  */
 
@@ -26,6 +27,8 @@ import type { RequestOptions } from './types.ts';
 import {
   fetchRelatedItems,
   fetchTitleCandidates,
+  fetchTimeTicketGroup,
+  sameTimeTicket,
   type Identity,
   type MappingCode,
 } from './upstreams/savanna.ts';
@@ -55,7 +58,7 @@ export interface RegionMapping {
   /**
    * `ambiguous` only: every target-region NSUID of the source's kind that
    * passed matching. Absent when the conflict is elsewhere (the source title's
-   * demos, or a demo's parent title); `reason` names those NSUIDs instead.
+   * demos, a demo's parent title, or the source ticket group).
    */
   candidates?: string[];
 }
@@ -110,6 +113,8 @@ export async function mapInto(
 ): Promise<RegionMapping> {
   const target = normalizeRegion(region);
 
+  if (identity.kind === 'ticket') return mapTimeTicket(identity, target, options);
+
   if (identity.kind === 'title') {
     const mapped = await mapTitle(identity, target, resolver, options);
     return mapped.title ? { region: target, nsuid: mapped.title.nsuid } : mapped;
@@ -130,6 +135,60 @@ export async function mapInto(
   }
 
   return blocked(identity, target, 'unsupported', `${identity.kind} cannot be mapped`);
+}
+
+async function mapTimeTicket(
+  source: Identity,
+  region: string,
+  options?: RequestOptions,
+): Promise<RegionMapping> {
+  if (source.code || !source.ticket) {
+    return blocked(source, region, 'insufficient_identity', 'No ordinary time-ticket identity');
+  }
+  const { country, language } = contextFor(region);
+  const group = await fetchTimeTicketGroup(source.ticket.groupId, country, language, options);
+  if (!group) return unmapped(region, 'no_candidates', 'The target ticket group was not returned');
+  if (
+    !group.id ||
+    !group.publisherId ||
+    !group.tickets ||
+    group.tickets.some((ticket) => !ticket.ticket)
+  ) {
+    return unmapped(
+      region,
+      'insufficient_identity',
+      'The target ticket group has incomplete identity',
+    );
+  }
+  if (group.id !== source.ticket.groupId || group.publisherId !== source.ticket.publisherId) {
+    return unmapped(
+      region,
+      'no_match',
+      'The target ticket group or publisher differs from the source',
+    );
+  }
+  if (!group.tickets.length) {
+    return unmapped(region, 'no_candidates', 'The target group lists no ordinary time tickets');
+  }
+  const matches = [
+    ...new Set(
+      group.tickets
+        .filter((ticket) => sameTimeTicket(ticket.ticket!, source.ticket!))
+        .map((ticket) => ticket.nsuid),
+    ),
+  ];
+  if (matches.length === 1) return { region, nsuid: matches[0] };
+  return matches.length
+    ? ambiguous(
+        region,
+        `Ambiguous ordinary time ticket: ${matches.length} candidates in ${region} match its group, minutes and subscription identity`,
+        matches,
+      )
+    : unmapped(
+        region,
+        'no_match',
+        'No ordinary time ticket matches the exact minutes and subscription identity',
+      );
 }
 
 /** The matching target title keeps its identity so a demo can read the title's demo list. */
