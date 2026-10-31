@@ -1,4 +1,5 @@
-import { contextFor, mapInto, type NsuidMapping } from './mapping.ts';
+import { NsuidMapError } from './errors.ts';
+import { contextFor, mapInto, type NsuidMapping, type RegionMapping } from './mapping.ts';
 import { mergeHeaders } from './headers.ts';
 import { normalizeRegion, parseNsuid } from './ids.ts';
 import type {
@@ -43,6 +44,12 @@ export interface MapOptions extends RequestOptions {
   from: string;
   /** Up to {@link MAX_REGIONS_PER_MAP} countries. Duplicates are collapsed. */
   to: string[];
+  /**
+   * `throw` (default): a failed request for any target rejects the call.
+   * `return`: that target gets `status: 'error'` and the others keep their
+   * results. Cancellation through `signal` still rejects.
+   */
+  targetErrors?: 'throw' | 'return';
 }
 
 /**
@@ -225,10 +232,24 @@ export class NsuidMapper {
     const requestOptions = this.withClientTransport(options);
     const identity = (await fetchIdentities([id], country, language, requestOptions)).get(id)!;
 
+    const returnErrors = options.targetErrors === 'return';
     const mapped = await Promise.all(
-      targets.map((region) => mapInto(identity, region, this, requestOptions)),
+      targets.map((region) =>
+        mapInto(identity, region, this, requestOptions).catch((error: unknown) => {
+          if (!returnErrors || !(error instanceof NsuidMapError) || error.kind === 'abort')
+            throw error;
+          return targetError(region, error);
+        }),
+      ),
     );
-    return { source: { ...identity, region: from }, targets: mapped };
+    const source = { ...identity, region: from };
+    // A source problem is reported once on the source, as well as on each target.
+    const blocked = mapped.find((target) => target.scope === 'source');
+    if (blocked && !source.code) {
+      source.code = blocked.code;
+      source.reason = blocked.reason;
+    }
+    return { source, targets: mapped };
   }
 
   /** {@link AppIdResolver} — lets `mapping.ts` drive the redirector. */
@@ -256,4 +277,18 @@ export class NsuidMapper {
       retries: options?.retries ?? this.retries,
     };
   }
+}
+
+function targetError(region: string, error: NsuidMapError): RegionMapping {
+  return {
+    region: normalizeRegion(region),
+    status: 'error',
+    error: {
+      kind: error.kind,
+      message: error.message,
+      retryable: error.retryable,
+      ...(error.status === undefined ? {} : { status: error.status }),
+      ...(error.retryAfterMs === undefined ? {} : { retryAfterMs: error.retryAfterMs }),
+    },
+  };
 }

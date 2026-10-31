@@ -22,6 +22,7 @@
  */
 
 import { getCountryLanguageInfo } from './catalogs.ts';
+import type { NsuidMapError } from './errors.ts';
 import { deriveBaseApplicationIdFromDlcAppId, normalizeRegion, parseAppId } from './ids.ts';
 import type { RequestOptions } from './types.ts';
 import {
@@ -46,14 +47,50 @@ export function contextFor(region: string): { country: string; language: string 
   return { country, language };
 }
 
+/**
+ * What a target result means to the caller. `code` says where mapping stopped.
+ *
+ * - `mapped`: `nsuid` is the one matching product.
+ * - `not_found`: no same product was found. Usually stable: the product was not
+ *   released there, or is sold there as a different product.
+ * - `ambiguous`: several products match, or the source relation is ambiguous.
+ * - `undetermined`: the available data cannot settle it yet (missing identity,
+ *   an unfinished search, a source the catalog did not return).
+ * - `unsupported`: this kind of product is not mapped.
+ * - `error`: a request failed; only with `targetErrors: 'return'`.
+ */
+export type MappingStatus =
+  'mapped' | 'not_found' | 'ambiguous' | 'undetermined' | 'unsupported' | 'error';
+
+const STATUS: Record<MappingCode, MappingStatus> = {
+  source_not_found: 'undetermined',
+  unsupported: 'unsupported',
+  insufficient_identity: 'undetermined',
+  unresolved: 'not_found',
+  no_candidates: 'not_found',
+  no_match: 'not_found',
+  ambiguous: 'ambiguous',
+  incomplete: 'undetermined',
+};
+
+/** A failed request for one target, returned instead of thrown on request. */
+export interface TargetError {
+  kind: NsuidMapError['kind'];
+  message: string;
+  retryable: boolean;
+  status?: number;
+  retryAfterMs?: number;
+}
+
 /** One region's answer for one source nsuid. */
 export interface RegionMapping {
   region: string;
+  status: MappingStatus;
   /** The region's nsuid, when it could be established. */
   nsuid?: string;
   /** Stable category of why the nsuid could not be established. */
   code?: MappingCode;
-  /** Human-readable detail; wording may change, so branch on `code`. */
+  /** Human-readable detail; wording may change, so branch on `status` or `code`. */
   reason?: string;
   /**
    * `ambiguous` only: every target-region NSUID of the source's kind that
@@ -61,10 +98,36 @@ export interface RegionMapping {
    * demos, a demo's parent title, or the source ticket group).
    */
   candidates?: string[];
+  /**
+   * Target-region title NSUIDs reached through the source's application IDs
+   * when the exact product was not established: the parent titles of a DLC,
+   * bundle or demo, or a title with the same application ID but another SKU.
+   * The same game, not the same product.
+   */
+  titles?: string[];
+  /** `source` when the source product itself blocks mapping, so every target has this result. */
+  scope?: 'source';
+  /** `error` only. */
+  error?: TargetError;
 }
 
 function unmapped(region: string, code: MappingCode, reason: string): RegionMapping {
-  return { region, code, reason };
+  return { region, status: STATUS[code], code, reason };
+}
+
+function mappedTo(region: string, nsuid: string): RegionMapping {
+  return { region, status: 'mapped', nsuid };
+}
+
+/** A result caused by the source product alone. */
+function fromSource(result: RegionMapping): RegionMapping {
+  return { ...result, scope: 'source' };
+}
+
+/** Attach the target titles a failed DLC, bundle or demo search reached. */
+function withTitles(result: RegionMapping, titles: Iterable<string>): RegionMapping {
+  const all = [...new Set(titles)].sort();
+  return result.nsuid || !all.length ? result : { ...result, titles: all };
 }
 
 /** NSUIDs listed in a `reason`; longer lists are cut so the text stays short. */
@@ -80,12 +143,15 @@ function listIds(ids: Iterable<string>): string {
 
 /** An `ambiguous` result whose target-region candidates are returned as data. */
 function ambiguous(region: string, reason: string, candidates: Iterable<string>): RegionMapping {
-  return { region, code: 'ambiguous', reason, candidates: [...new Set(candidates)].sort() };
+  return {
+    ...unmapped(region, 'ambiguous', reason),
+    candidates: [...new Set(candidates)].sort(),
+  };
 }
 
 /** A source identity's own problem, carried to every target it blocks. */
 function blocked(identity: Identity, region: string, code: MappingCode, fallback: string) {
-  return unmapped(region, identity.code ?? code, identity.reason ?? fallback);
+  return fromSource(unmapped(region, identity.code ?? code, identity.reason ?? fallback));
 }
 
 export interface NsuidMapping {
@@ -117,7 +183,7 @@ export async function mapInto(
 
   if (identity.kind === 'title') {
     const mapped = await mapTitle(identity, target, resolver, options);
-    return mapped.title ? { region: target, nsuid: mapped.title.nsuid } : mapped;
+    return mapped.title ? mappedTo(target, mapped.title.nsuid) : mapped;
   }
 
   if (identity.kind === 'demo' && identity.parentTitles) {
@@ -177,7 +243,7 @@ async function mapTimeTicket(
         .map((ticket) => ticket.nsuid),
     ),
   ];
-  if (matches.length === 1) return { region, nsuid: matches[0] };
+  if (matches.length === 1) return mappedTo(region, matches[0]!);
   return matches.length
     ? ambiguous(
         region,
@@ -201,7 +267,9 @@ async function mapTitle(
   if (!identity.appId)
     return blocked(identity, target, 'insufficient_identity', 'no application id');
   if (!identity.labelPlatform || !identity.titleIds?.length) {
-    return unmapped(target, 'insufficient_identity', 'Source title has insufficient SKU identity');
+    return fromSource(
+      unmapped(target, 'insufficient_identity', 'Source title has insufficient SKU identity'),
+    );
   }
   const nsuid = await resolver.resolve(identity.appId, target, options);
   if (!nsuid) return unmapped(target, 'unresolved', UNRESOLVED_NSUID_REASON);
@@ -221,14 +289,18 @@ async function mapTitle(
       candidate.labelPlatform === identity.labelPlatform &&
       sameSet(candidate.titleIds, identity.titleIds!),
   );
-  if (matches.length === 1) return { region: target, title: matches[0] };
+  if (matches.length === 1) return { ...mappedTo(target, matches[0]!.nsuid), title: matches[0] };
   return matches.length > 1
     ? ambiguous(
         target,
         `Ambiguous title SKU: ${matches.length} candidates in ${target} match the source platform and rights`,
         matches.map((match) => match.nsuid),
       )
-    : unmapped(target, 'no_match', 'No title SKU matches the source platform and rights');
+    : // The same application ID reached a title of another platform or rights.
+      withTitles(
+        unmapped(target, 'no_match', 'No title SKU matches the source platform and rights'),
+        [nsuid],
+      );
 }
 
 /**
@@ -250,28 +322,35 @@ async function mapDemo(
     const demos = onPlatform(parent).map((demo) => demo.nsuid);
     // The link must hold both ways; otherwise the title's sole demo may be another product.
     if (!demos.includes(source.nsuid)) {
-      return unmapped(
-        region,
-        'insufficient_identity',
-        demos.length
-          ? `The source title ${parent.nsuid} does not list this demo on its platform; it lists: ${listIds(demos)}`
-          : `The source title ${parent.nsuid} lists no demo on this platform`,
+      return fromSource(
+        unmapped(
+          region,
+          'insufficient_identity',
+          demos.length
+            ? `The source title ${parent.nsuid} does not list this demo on its platform; it lists: ${listIds(demos)}`
+            : `The source title ${parent.nsuid} lists no demo on this platform`,
+        ),
       );
     }
     if (demos.length === 1) continue;
     // These demos are in the source region, so they stay out of `candidates`.
-    return unmapped(
-      region,
-      'ambiguous',
-      `Ambiguous demo: the source title ${parent.nsuid} lists ${demos.length} demos on this platform: ${listIds(demos)}`,
+    return fromSource(
+      unmapped(
+        region,
+        'ambiguous',
+        `Ambiguous demo: the source title ${parent.nsuid} lists ${demos.length} demos on this platform: ${listIds(demos)}`,
+      ),
     );
   }
   const found = new Set<string>();
+  // Target titles reached, returned when no single demo is found.
+  const titles = new Set<string>();
   let failure: RegionMapping | undefined;
   for (const parent of parents) {
     const mapped = await mapTitle(parent, region, resolver, options);
     if (!mapped.title) {
-      // Title candidates are not demos, so they move from `candidates` into the text.
+      // Title candidates are not demos, so they move from `candidates` to `titles`.
+      for (const id of mapped.candidates ?? mapped.titles ?? []) titles.add(id);
       failure ??= mapped.candidates
         ? unmapped(
             region,
@@ -281,12 +360,16 @@ async function mapDemo(
         : mapped;
       continue;
     }
+    titles.add(mapped.title.nsuid);
     const demos = onPlatform(mapped.title).map((demo) => demo.nsuid);
     if (demos.length > 1) {
-      return ambiguous(
-        region,
-        `Ambiguous demo: the target title ${mapped.title.nsuid} in ${region} lists ${demos.length} demos on this platform`,
-        demos,
+      return withTitles(
+        ambiguous(
+          region,
+          `Ambiguous demo: the target title ${mapped.title.nsuid} in ${region} lists ${demos.length} demos on this platform`,
+          demos,
+        ),
+        titles,
       );
     }
     if (demos[0]) found.add(demos[0]);
@@ -297,16 +380,19 @@ async function mapDemo(
         'The target title lists no demo on the source platform',
       );
   }
-  if (found.size === 1) return { region, nsuid: [...found][0] };
+  if (found.size === 1) return mappedTo(region, [...found][0]!);
   if (found.size)
-    return ambiguous(
-      region,
-      `Ambiguous demo: parent titles lead to ${found.size} different demos in ${region}`,
-      found,
+    return withTitles(
+      ambiguous(
+        region,
+        `Ambiguous demo: parent titles lead to ${found.size} different demos in ${region}`,
+        found,
+      ),
+      titles,
     );
-  return failure
-    ? unmapped(region, failure.code ?? 'unresolved', failure.reason ?? UNRESOLVED_NSUID_REASON)
-    : unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
+  const { titles: _, ...result } =
+    failure ?? unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
+  return withTitles(result, titles);
 }
 
 /** Bound distinct parent candidates and upstream upgrade links. */
@@ -339,13 +425,15 @@ async function mapBundle(
     }
   }
   if (!parents.size)
-    return unmapped(
-      region,
-      'insufficient_identity',
-      `no valid parent application id (${malformed} malformed application id; ${nonParent} application id outside the base/DLC ranges)`,
+    return fromSource(
+      unmapped(
+        region,
+        'insufficient_identity',
+        `no valid parent application id (${malformed} malformed application id; ${nonParent} application id outside the base/DLC ranges)`,
+      ),
     );
   if (parents.size > MAX_PARENT_TITLES)
-    return unmapped(region, 'incomplete', 'Bundle parent candidate cap exceeded');
+    return fromSource(unmapped(region, 'incomplete', 'Bundle parent candidate cap exceeded'));
 
   const queue = new Set<string>();
   for (const appId of parents) {
@@ -353,28 +441,34 @@ async function mapBundle(
     if (parent) queue.add(parent);
   }
   if (!queue.size) return unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
+  // Every failure below has reached these target titles.
+  const result = (outcome: RegionMapping) => withTitles(outcome, queue);
   const { country, language } = contextFor(region);
   const candidates = new Map<string, Identity>();
   let scanned = 0;
   // A Set iterator visits newly appended linked parents and deduplicates cycles.
   for (const parent of queue) {
     if (++scanned > MAX_PARENT_TITLES)
-      return unmapped(region, 'incomplete', 'Bundle parent candidate cap exceeded');
+      return result(unmapped(region, 'incomplete', 'Bundle parent candidate cap exceeded'));
     const related = await fetchRelatedItems(parent, country, language, true, options);
     if (related.truncated)
-      return unmapped(
-        region,
-        'incomplete',
-        `Bundle candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
+      return result(
+        unmapped(
+          region,
+          'incomplete',
+          `Bundle candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
+        ),
       );
     for (const linked of related.upgradeNsuids) queue.add(linked);
     for (const candidate of related.bundles) candidates.set(candidate.nsuid, candidate);
   }
   if (!candidates.size) {
-    return unmapped(
-      region,
-      'no_candidates',
-      'No bundle candidates were returned for the resolved parent titles; parent listings may omit unavailable or NOT_SALE items',
+    return result(
+      unmapped(
+        region,
+        'no_candidates',
+        'No bundle candidates were returned for the resolved parent titles; parent listings may omit unavailable or NOT_SALE items',
+      ),
     );
   }
   const matches = [...candidates.values()].filter(
@@ -384,18 +478,20 @@ async function mapBundle(
       sameSet(candidate.titleIds, source.titleIds!) &&
       sameSet(candidate.contentKeys, source.contentKeys!),
   );
-  if (matches.length === 1) return { region, nsuid: matches[0]!.nsuid };
-  return matches.length > 1
-    ? ambiguous(
-        region,
-        `Ambiguous bundle SKU: ${matches.length} candidates in ${region} match platform, rights and contents`,
-        matches.map((match) => match.nsuid),
-      )
-    : unmapped(
-        region,
-        'no_match',
-        'No bundle SKU matches platform, rights and contents; unavailable or NOT_SALE items may be absent from parent listings',
-      );
+  if (matches.length === 1) return mappedTo(region, matches[0]!.nsuid);
+  return result(
+    matches.length > 1
+      ? ambiguous(
+          region,
+          `Ambiguous bundle SKU: ${matches.length} candidates in ${region} match platform, rights and contents`,
+          matches.map((match) => match.nsuid),
+        )
+      : unmapped(
+          region,
+          'no_match',
+          'No bundle SKU matches platform, rights and contents; unavailable or NOT_SALE items may be absent from parent listings',
+        ),
+  );
 }
 
 /** Compare complete DLC SKUs, including entries exposed only through upgradeInfo. */
@@ -406,10 +502,12 @@ async function mapDlc(
   options?: RequestOptions,
 ): Promise<RegionMapping> {
   if (!source.labelPlatform || !source.titleIds?.length) {
-    return unmapped(
-      region,
-      'insufficient_identity',
-      'Source DLC has insufficient platform or ROM rights',
+    return fromSource(
+      unmapped(
+        region,
+        'insufficient_identity',
+        'Source DLC has insufficient platform or ROM rights',
+      ),
     );
   }
   const parents = new Set<string>();
@@ -417,14 +515,18 @@ async function mapDlc(
     try {
       const parent = parentApplicationId(id);
       if (!parent)
-        return unmapped(region, 'insufficient_identity', 'DLC has no valid parent application id');
+        return fromSource(
+          unmapped(region, 'insufficient_identity', 'DLC has no valid parent application id'),
+        );
       parents.add(parent);
     } catch {
-      return unmapped(region, 'insufficient_identity', 'DLC has a malformed application id');
+      return fromSource(
+        unmapped(region, 'insufficient_identity', 'DLC has a malformed application id'),
+      );
     }
   }
   if (parents.size > MAX_PARENT_TITLES)
-    return unmapped(region, 'incomplete', 'DLC parent candidate cap exceeded');
+    return fromSource(unmapped(region, 'incomplete', 'DLC parent candidate cap exceeded'));
 
   const candidates = new Map<string, Identity>();
   const visited = new Set<string>();
@@ -435,20 +537,26 @@ async function mapDlc(
     visited.add(parent);
     const related = await fetchRelatedItems(parent, country, language, false, options);
     if (related.truncated)
-      return unmapped(
-        region,
-        'incomplete',
-        `DLC candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
+      return withTitles(
+        unmapped(
+          region,
+          'incomplete',
+          `DLC candidate scan incomplete (${related.incompleteReason ?? 'paging cap'})`,
+        ),
+        visited,
       );
     // upgradeInfo and dlcItems can both expose the same SKU; count it only once.
     for (const candidate of related.dlcs) candidates.set(candidate.nsuid, candidate);
   }
   if (!visited.size) return unmapped(region, 'unresolved', UNRESOLVED_NSUID_REASON);
   if (!candidates.size) {
-    return unmapped(
-      region,
-      'no_candidates',
-      'No DLC candidates were returned for the resolved parent titles',
+    return withTitles(
+      unmapped(
+        region,
+        'no_candidates',
+        'No DLC candidates were returned for the resolved parent titles',
+      ),
+      visited,
     );
   }
   const matches = [...candidates.values()].filter(
@@ -456,18 +564,21 @@ async function mapDlc(
       candidate.labelPlatform === source.labelPlatform &&
       sameSet(candidate.titleIds, source.titleIds!),
   );
-  if (matches.length === 1) return { region, nsuid: matches[0]!.nsuid };
-  return matches.length > 1
-    ? ambiguous(
-        region,
-        `Ambiguous DLC SKU: ${matches.length} candidates in ${region} match platform and rights; the available identity fields cannot distinguish them`,
-        matches.map((match) => match.nsuid),
-      )
-    : unmapped(
-        region,
-        'no_match',
-        'No DLC SKU matches the source platform and complete ROM rights',
-      );
+  if (matches.length === 1) return mappedTo(region, matches[0]!.nsuid);
+  return withTitles(
+    matches.length > 1
+      ? ambiguous(
+          region,
+          `Ambiguous DLC SKU: ${matches.length} candidates in ${region} match platform and rights; the available identity fields cannot distinguish them`,
+          matches.map((match) => match.nsuid),
+        )
+      : unmapped(
+          region,
+          'no_match',
+          'No DLC SKU matches the source platform and complete ROM rights',
+        ),
+    visited,
+  );
 }
 
 /**

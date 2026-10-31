@@ -74,7 +74,7 @@ function setup(sourceDemos: Demo[], targetDemos: Demo[], parents = 1) {
 
 test('demo: maps through its parent title to that title’s only demo on the platform', async () => {
   const r = await setup([bee(US_DEMO)], [bee(GB_DEMO)]).map();
-  expect(r).toEqual({ region: 'GB', nsuid: String(GB_DEMO) });
+  expect(r).toEqual({ region: 'GB', status: 'mapped', nsuid: String(GB_DEMO) });
 });
 
 test('demo: a demo on another platform is not a candidate', async () => {
@@ -85,6 +85,8 @@ test('demo: a demo on another platform is not a candidate', async () => {
   const r = await setup([bee(US_DEMO)], [other]).map();
   expect(r.nsuid).toBeUndefined();
   expect(r.code).toBe('no_candidates');
+  // The parent title exists in the target; only the demo does not.
+  expect(r.titles).toEqual([String(GB_TITLE)]);
 });
 
 test('demo: two same-platform demos under the source title stay unmapped without target requests', async () => {
@@ -94,6 +96,7 @@ test('demo: two same-platform demos under the source title stay unmapped without
   expect(r.code).toBe('ambiguous');
   // Both demos are in the source region, so they are named in the text, not in `candidates`.
   expect(r.candidates).toBeUndefined();
+  expect(r.scope).toBe('source');
   expect(r.reason).toContain(`${US_DEMO}, 70030000099999`);
   expect(s.targetRequests()).toBe(0);
 });
@@ -195,7 +198,7 @@ describe('demo with two parent titles', () => {
 
   test('an unresolved parent is skipped when another parent leads to the demo', async () => {
     const r = await map({ [APP_A]: undefined, [APP_B]: TITLE_B }, { [TITLE_B]: [bee(GB_DEMO)] });
-    expect(r).toEqual({ region: 'GB', nsuid: String(GB_DEMO) });
+    expect(r).toEqual({ region: 'GB', status: 'mapped', nsuid: String(GB_DEMO) });
   });
 
   test('both parents leading to the same demo is not ambiguity', async () => {

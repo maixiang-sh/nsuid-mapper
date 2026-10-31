@@ -128,6 +128,7 @@ test('empty bundle candidates report a discovery limitation without declaring th
   const result = await setup(sample(70070000039411), []).map();
   expect(result.targets[0]?.nsuid).toBeUndefined();
   expect(result.targets[0]?.code).toBe('no_candidates');
+  expect(result.targets[0]?.titles).toEqual([BASE]);
 });
 
 test('multiple exact candidates on different linked parents remain ambiguous', async () => {
@@ -138,6 +139,8 @@ test('multiple exact candidates on different linked parents remain ambiguous', a
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.code).toBe('ambiguous');
   expect(r.targets[0]?.candidates).toEqual(['70070000039564', '70070099999004']);
+  // Both linked parents were scanned.
+  expect(r.targets[0]?.titles).toEqual([BASE, UPGRADE]);
 });
 
 test('Just Dance: non-searchable 3/12-month rights distinguish Deluxe and Ultimate', async () => {

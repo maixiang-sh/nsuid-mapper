@@ -27,11 +27,12 @@ test('the root exposes the supported API without internal parsers or defaults', 
   );
 });
 
-test('consumer composition reuses one identity and handles target failures independently', async () => {
-  // Synthetic title identities and a single-country failure model the gateway's API usage.
-  const sourceId = '70010000000001';
-  const targetId = '70010000000002';
-  let sourceReads = 0;
+// Synthetic title identities and a single-country failure model the gateway's API usage.
+const sourceId = '70010000000001';
+const targetId = '70010000000002';
+
+function gateway() {
+  const state = { sourceReads: 0 };
   const options: RequestOptions = {
     retries: 0,
     fetch: (async (input, init) => {
@@ -43,7 +44,7 @@ test('consumer composition reuses one identity and handles target failures indep
         });
       }
       const { variables } = JSON.parse(String(init?.body));
-      if (variables.country === 'JP') sourceReads++;
+      if (variables.country === 'JP') state.sourceReads++;
       return Response.json({
         data: {
           item: {
@@ -61,6 +62,11 @@ test('consumer composition reuses one identity and handles target failures indep
       });
     }) as typeof fetch,
   };
+  return { options, state };
+}
+
+test('consumer composition reuses one identity and handles target failures independently', async () => {
+  const { options, state } = gateway();
   const { country, language } = api.contextFor('JP');
   const identity: Identity = (
     await api.fetchIdentities([sourceId], country, language, options)
@@ -72,11 +78,35 @@ test('consumer composition reuses one identity and handles target failures indep
       .map((region) => api.mapInto(identity, region, resolver, options)),
   );
 
-  expect(sourceReads).toBe(1);
-  expect(results[0]).toEqual({ status: 'fulfilled', value: { region: 'US', nsuid: targetId } });
+  expect(state.sourceReads).toBe(1);
+  expect(results[0]).toEqual({
+    status: 'fulfilled',
+    value: { region: 'US', status: 'mapped', nsuid: targetId },
+  });
   expect(results[1]?.status).toBe('rejected');
   if (results[1]?.status === 'rejected') {
     expect(results[1].reason).toBeInstanceOf(api.NsuidMapError);
     expect(results[1].reason.status).toBe(503);
   }
+});
+
+test('mapNsuid can return a failed target while keeping the others', async () => {
+  const { options } = gateway();
+  const mapper = new api.NsuidMapper(options);
+  await expect(mapper.mapNsuid(sourceId, { from: 'JP', to: ['US', 'GB'] })).rejects.toBeInstanceOf(
+    api.NsuidMapError,
+  );
+  const result = await mapper.mapNsuid(sourceId, {
+    from: 'JP',
+    to: ['US', 'GB'],
+    targetErrors: 'return',
+  });
+  expect(result.targets).toEqual([
+    { region: 'US', status: 'mapped', nsuid: targetId },
+    {
+      region: 'GB',
+      status: 'error',
+      error: { kind: 'http', message: expect.any(String), retryable: true, status: 503 },
+    },
+  ]);
 });

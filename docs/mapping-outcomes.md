@@ -14,8 +14,9 @@ responses may change.
 
 ## Mapping outcomes
 
-A successful target has `nsuid`; an unmapped target has `code` and `reason`.
-Branch on the stable `code`. The explanatory wording in `reason` may change.
+Each target has a [`status`](reference.md#result-status); an unmapped target also
+has `code` and `reason`. This section explains each `code`. The explanatory
+wording in `reason` may change.
 
 | `code`                  | Category                          | Known causes or conditions                                                                                                                                                                                                                                                             |
 | ----------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -31,6 +32,25 @@ Branch on the stable `code`. The explanatory wording in `reason` may change.
 None of these results alone proves that a product is not sold in the target
 country. Delisting, catalog differences, discovery limits and identity
 differences can produce the same result.
+
+### Business causes
+
+About 78,000 unmapped results between the JP, US, GB and HK stores, recorded on
+**2026-10-31**, were classified by comparing ROM rights, names, publishers and
+sales status in stored catalogs:
+
+| Cause                                     | Share | Usual `code`                                           | Observations                                                                                                                                                                             |
+| ----------------------------------------- | ----- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Not released in the target store          | 68%   | `unresolved`                                           | Western independent titles absent from HK and JP; Japanese titles sold only in JP. DLC and bundles follow their title.                                                                   |
+| Sold there as a different product         | 20%   | `unresolved`                                           | A separate release with other application IDs, often from a local publisher, e.g. eastasiasoft in Asia or XSEED in the US. A lower bound: names in different languages are not compared. |
+| Title sold there, this DLC or bundle not  | 4%    | `no_candidates`, `no_match`                            | Regional DLC, regional bundles or bundles with other contents. `titles` lists the target title.                                                                                          |
+| Delisted                                  | 5%    | `unresolved`, `no_candidates`, `insufficient_identity` | The target store no longer lists the product.                                                                                                                                            |
+| New or pre-order product, data incomplete | 0.8%  | `insufficient_identity`                                | Missing application ID or ROM rights; usually filled in after release.                                                                                                                   |
+| Several listings of one product           | 0.6%  | `ambiguous`                                            | See [ambiguity causes](#ambiguity-causes).                                                                                                                                               |
+| Search limits                             | 0.6%  | `incomplete`, `source_not_found`                       | Mostly large multi-game collections.                                                                                                                                                     |
+
+The shares describe that set as a whole. A single result's cause cannot be read
+from its `code`.
 
 ### Insufficient identity in detail
 
@@ -78,7 +98,11 @@ listings.
   The source and targets carry `ambiguous`, without target `candidates`.
 - When the source title has several demos, or a demo's parent title is ambiguous,
   those source-demo/parent-title IDs are not target-demo `candidates`; `reason`
-  explains the conflict.
+  explains the conflict and `scope` is `source` when the conflict is in the
+  source region. Target titles a demo's parent maps to are in `titles`.
+- Candidates that failed matching are not returned: they are known to be
+  different products. When a DLC, bundle or demo is not found but its target
+  title is, `titles` lists that title.
 
 ### Verified examples
 
@@ -117,10 +141,10 @@ errors usually require a permission, configuration or query change. `timeout`
 and `abort` end the current request without restarting its budget through an
 internal retry.
 
-An execution error from any target rejects the whole `mapNsuid` call; it is not
-automatically converted to that target's mapping code. Use the
-[low-level functions](reference.md#low-level-functions) to retain other targets'
-results while handling errors independently.
+An execution error is never converted to a mapping `code`. By default it rejects
+the whole `mapNsuid` call; with `targetErrors: 'return'` the failed target has
+`status: 'error'` and the others keep their results (see
+[errors](reference.md#errors)).
 
 ## Catalog and snapshot quality
 

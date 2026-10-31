@@ -85,6 +85,7 @@ test('DLC: two matching SKUs remain ambiguous', async () => {
   expect(r.targets[0]?.nsuid).toBeUndefined();
   expect(r.targets[0]?.code).toBe('ambiguous');
   expect(r.targets[0]?.candidates).toEqual(['70050000023117', '70050099999001']);
+  expect(r.targets[0]?.titles).toEqual(['70010000029014']);
 });
 test('real shared-right DLC: all four GB products remain ambiguous for JP Part 1', async () => {
   // Actual 2026-10-11 selections; no synthetic duplicate candidate or modified rights.
@@ -105,7 +106,13 @@ test('DLC: empty parent candidates have a distinct code from identity mismatch',
   const source = sample(70050000023111);
   const empty = (await setup(source, []).map()).targets[0];
   expect(empty?.code).toBe('no_candidates');
-  expect((await setup(source, [sample(70050000078275)]).map()).targets[0]?.code).toBe('no_match');
+  const other = (await setup(source, [sample(70050000078275)]).map()).targets[0];
+  expect(other?.code).toBe('no_match');
+  // The parent title was reached; only this DLC was not found.
+  for (const target of [empty, other]) {
+    expect(target?.status).toBe('not_found');
+    expect(target?.titles).toEqual(['70010000029014']);
+  }
 });
 test('DLC: the same SKU in both upgradeInfo and dlcItems is not ambiguity', async () => {
   const r = await setup(sample(70050000077805), [sample(70050000078275)], {
@@ -119,6 +126,9 @@ test('DLC: missing source platform stops mapping before target requests', async 
   const client = setup(source, [sample(70050000023117)]);
   const r = await client.map();
   expect(r.targets[0]?.code).toBe('insufficient_identity');
+  expect(r.targets[0]?.scope).toBe('source');
+  expect(r.source.code).toBe('insufficient_identity');
+  expect(r.source.reason).toBe(r.targets[0]?.reason);
   expect(client.redirects()).toBe(0);
 });
 test('DLC: a match found in a truncated scan is not accepted as unique', async () => {

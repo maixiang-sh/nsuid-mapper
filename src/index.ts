@@ -37,7 +37,13 @@ export {
   type MapOptions,
 } from './client.ts';
 export { NsuidMapError } from './errors.ts';
-export type { NsuidMapping, RegionMapping, AppIdResolver } from './mapping.ts';
+export type {
+  NsuidMapping,
+  RegionMapping,
+  MappingStatus,
+  TargetError,
+  AppIdResolver,
+} from './mapping.ts';
 export type {
   Identity,
   IdentityKind,

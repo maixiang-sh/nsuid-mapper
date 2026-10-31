@@ -55,18 +55,19 @@ console.log(result.targets);
 
 ```js
 [
-  { region: 'US', nsuid: '70010000095203' },
-  { region: 'GB', nsuid: '70010000095204' },
-  { region: 'HK', nsuid: '70010000095206' },
+  { region: 'US', status: 'mapped', nsuid: '70010000095203' },
+  { region: 'GB', status: 'mapped', nsuid: '70010000095204' },
+  { region: 'HK', status: 'mapped', nsuid: '70010000095206' },
   {
     region: 'KR',
+    status: 'not_found',
     code: 'unresolved',
     reason: 'The application ID could not be resolved in the target region; …',
   },
 ];
 ```
 
-每个目标要么有 `nsuid`，要么有 `code` 和 `reason`。程序应根据 `code` 判断；`reason` 供人阅读，措辞可能调整。
+每个目标都有 `status`。映射成功时有 `nsuid`，否则有 `code` 和 `reason`。程序应根据 `status` 或 `code` 判断；`reason` 供人阅读，措辞可能调整。
 
 本项目不发布到 npm。在其他项目中使用时，从 GitHub 安装并锁定到某个提交：
 

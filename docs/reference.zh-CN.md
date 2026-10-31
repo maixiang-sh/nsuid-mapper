@@ -14,6 +14,7 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 | ------------------------ | ----------------------------------------------------------- |
 | `from`                   | 源 NSUID 所属的国家或地区。NSUID 只能在其所属的商店中查到。 |
 | `to`                     | 最多 8 个目标，重复项会被去除。                             |
+| `targetErrors`           | `throw`（默认）或 `return`，见[错误](#错误)。               |
 | `signal`、`timeoutMs` 等 | 见[请求选项](#请求选项)。                                   |
 
 返回结果：
@@ -21,16 +22,30 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 ```ts
 {
   source: { region, nsuid, kind, code?, reason?, … }, // 在 from 中读取的源商品
-  targets: [{ region, nsuid?, code?, reason?, candidates? }], // 每个目标一项，顺序与 to 相同
+  // 每个目标一项，顺序与 to 相同
+  targets: [{ region, status, nsuid?, code?, reason?, candidates?, titles?, scope?, error? }],
 }
 ```
 
-- 找到商品时有 `nsuid`，否则有 `code` 和 `reason`。程序应根据 `code` 判断（见[结果代码](#结果代码)）；`reason` 的措辞可能调整。
+- `status` 表示结果的含义（见[结果状态](#结果状态)）。`mapped` 时有 `nsuid`；除 `error` 外，其他状态都有 `code` 和 `reason`。`code` 表示映射在哪一步停止（见[结果代码](#结果代码)）；`reason` 的措辞可能调整。
 - `candidates` 只在 `ambiguous` 时出现：所有匹配成功的目标 NSUID，已排序。冲突不在目标区同类商品之间时不出现，例如 demo 的源 title 有多个 demo、demo 的父 title 本身有歧义，或源区同组有多张身份相同的时间券。
+- `titles` 在商品未映射、但已通过其 application ID 找到目标区 title 时出现：DLC、bundle 或 demo 的父 title，或 application ID 相同但 platform 或 ROM rights 不同的 title。已排序。它表示同一款游戏，不表示同一件商品。
+- `scope: 'source'` 表示结果完全由源商品造成，此时每个目标的结果都相同。
 - `source.kind`：`title`、`dlc`、`bundle`、`demo`、`ticket`、`consumable` 或 `unknown`。
 - 源商品无法映射时，`source` 带有相同的 `code` 和 `reason`，且不会请求任何目标。
 - `source` 的其他字段是用于比较的身份数据：application ID、platform、ROM rights 和 bundle 成员。
 - 普通时间券的 `source.ticket` 包含 `groupId`、`publisherId`、`grantMinutes`、`subscriptionMinutes`；最后一项在明确没有订阅关联时为 null，否则为关联订阅票券的精确分钟数。
+
+## 结果状态
+
+| `status`       | 含义                                                         | `code`                                                    |
+| -------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| `mapped`       | `nsuid` 是唯一匹配的商品。                                   | —                                                         |
+| `not_found`    | 没有找到同一件商品，结果通常稳定。                           | `unresolved`、`no_candidates`、`no_match`                 |
+| `ambiguous`    | 多件商品匹配，或源商品的关联有歧义。                         | `ambiguous`                                               |
+| `undetermined` | 现有数据暂时无法判断，之后再查可能不同。                     | `source_not_found`、`insufficient_identity`、`incomplete` |
+| `unsupported`  | 不映射这类商品，再查也不会变。                               | `unsupported`                                             |
+| `error`        | 请求失败。仅在 `targetErrors: 'return'` 时出现，见 `error`。 | —                                                         |
 
 ## 结果代码
 
@@ -119,7 +134,9 @@ new NsuidMapper({
 | `retryable`    | 为 `true` 时，稍后重试可能成功                                          |
 | `retryAfterMs` | `Retry-After` 要求的等待时间，单位毫秒                                  |
 
-`abort` 表示调用被 `signal` 取消；`response` 表示响应无法解析。任一目标失败时，整个 `mapNsuid` 调用都会抛出错误。如需保留其他目标的结果，请使用[底层函数](#底层函数)逐个目标映射。
+`abort` 表示调用被 `signal` 取消；`response` 表示响应无法解析。
+
+默认情况下，任一目标的请求失败都会使整个 `mapNsuid` 调用抛出错误。设置 `targetErrors: 'return'` 时，该目标的 `status` 为 `error`，并带有 `error` 对象（`kind`、`message`、`retryable`，已知时还有 `status` 和 `retryAfterMs`），其他目标保留各自的结果。读取源商品失败、输入无效和取消调用仍会抛出错误。
 
 ## 请求次数
 

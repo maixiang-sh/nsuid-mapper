@@ -63,19 +63,21 @@ console.log(result.targets);
 
 ```js
 [
-  { region: 'US', nsuid: '70010000095203' },
-  { region: 'GB', nsuid: '70010000095204' },
-  { region: 'HK', nsuid: '70010000095206' },
+  { region: 'US', status: 'mapped', nsuid: '70010000095203' },
+  { region: 'GB', status: 'mapped', nsuid: '70010000095204' },
+  { region: 'HK', status: 'mapped', nsuid: '70010000095206' },
   {
     region: 'KR',
+    status: 'not_found',
     code: 'unresolved',
     reason: 'The application ID could not be resolved in the target region; …',
   },
 ];
 ```
 
-Each target has either `nsuid`, or `code` and `reason`. Branch on `code`; `reason`
-is for humans and its wording may change.
+Each target has a `status`. A mapped target has `nsuid`; any other has `code` and
+`reason`. Branch on `status` or `code`; `reason` is for humans and its wording may
+change.
 
 The library is not published to npm. To use it from another project, install it
 from GitHub, pinned to a commit:

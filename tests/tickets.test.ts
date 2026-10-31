@@ -73,8 +73,8 @@ test('recorded VIP year pass maps HK → US/GB using exact minutes and group ide
     subscriptionMinutes: null,
   });
   expect(result.targets).toEqual([
-    { region: 'US', nsuid: '70080000002054' },
-    { region: 'GB', nsuid: '70080000002066' },
+    { region: 'US', status: 'mapped', nsuid: '70080000002054' },
+    { region: 'GB', status: 'mapped', nsuid: '70080000002066' },
   ]);
   expect(s.requests).toHaveLength(3);
 });
@@ -83,7 +83,7 @@ test('recorded ordinary ticket with a subscription relation maps by minutes, not
   const s = setup(source('70080000001243'), { US: group('US', '21c207bbdc439909') }, 'AU');
   const result = await s.map();
   expect(result.source.ticket?.subscriptionMinutes).toBe(43200);
-  expect(result.targets[0]).toEqual({ region: 'US', nsuid: '70080000001247' });
+  expect(result.targets[0]).toEqual({ region: 'US', status: 'mapped', nsuid: '70080000001247' });
 });
 
 test('recorded same-duration source SKUs remain ambiguous before any target request', async () => {

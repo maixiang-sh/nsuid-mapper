@@ -16,6 +16,7 @@ const result = await mapper.mapNsuid(nsuid, { from, to, ...requestOptions });
 | ------------------------ | ------------------------------------------------------------------------------- |
 | `from`                   | Country or region of the source NSUID. An NSUID only resolves in its own store. |
 | `to`                     | Up to 8 targets. Duplicates are removed.                                        |
+| `targetErrors`           | `throw` (default) or `return`; see [errors](#errors).                           |
 | `signal`, `timeoutMs`, … | See [request options](#request-options).                                        |
 
 Result:
@@ -23,16 +24,25 @@ Result:
 ```ts
 {
   source: { region, nsuid, kind, code?, reason?, … }, // source product as read in `from`
-  targets: [{ region, nsuid?, code?, reason?, candidates? }], // one entry per target, in order
+  // one entry per target, in order
+  targets: [{ region, status, nsuid?, code?, reason?, candidates?, titles?, scope?, error? }],
 }
 ```
 
-- `nsuid` is present when the product was found; otherwise `code` and `reason`
-  are. Branch on `code` ([result codes](#result-codes)); `reason` may be reworded.
+- `status` says what the result means ([result status](#result-status)). A
+  `mapped` target has `nsuid`; any other except `error` has `code` and `reason`.
+  `code` says where mapping stopped ([result codes](#result-codes)); `reason`
+  may be reworded.
 - `candidates` appears only with `ambiguous`: the target NSUIDs that all matched,
   sorted. It is absent when the conflict is not between target products of the
   same kind — a demo whose source title lists several demos, or whose
   parent title is itself ambiguous, or an ambiguous source ticket group.
+- `titles` appears when the product was not mapped but target titles were
+  reached through its application IDs: the parent titles of a DLC, bundle or
+  demo, or a title with the same application ID but another platform or ROM
+  rights. Sorted. It identifies the same game, not the same product.
+- `scope: 'source'` marks a result caused by the source product alone. Every
+  target then has the same result.
 - `source.kind`: `title`, `dlc`, `bundle`, `demo`, `ticket`, `consumable` or `unknown`.
 - If the source cannot be mapped, `source` has the same `code` and `reason`, and no
   target is requested.
@@ -41,6 +51,17 @@ Result:
 - `source.ticket` holds an ordinary time ticket's `groupId`, `publisherId`,
   `grantMinutes` and `subscriptionMinutes`. The latter is null when there is
   explicitly no associated subscription, otherwise its exact grant minutes.
+
+## Result status
+
+| `status`       | Meaning                                                            | `code`                                                    |
+| -------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| `mapped`       | `nsuid` is the one matching product.                               | —                                                         |
+| `not_found`    | No same product was found. Usually stable.                         | `unresolved`, `no_candidates`, `no_match`                 |
+| `ambiguous`    | Several products match, or the source relation is ambiguous.       | `ambiguous`                                               |
+| `undetermined` | The available data cannot settle it yet; a later check may differ. | `source_not_found`, `insufficient_identity`, `incomplete` |
+| `unsupported`  | This kind of product is not mapped. Checking again does not help.  | `unsupported`                                             |
+| `error`        | A request failed. Only with `targetErrors: 'return'`; see `error`. | —                                                         |
 
 ## Result codes
 
@@ -144,9 +165,13 @@ A request that fails after its retries throws `NsuidMapError`:
 | `retryAfterMs` | Wait requested by `Retry-After`, in milliseconds                        |
 
 `abort` means the call was cancelled through `signal`; `response` means the reply
-could not be parsed. If any target fails, the whole `mapNsuid` call
-throws. To keep the other results, map each target separately with the
-[low-level functions](#low-level-functions).
+could not be parsed.
+
+By default, a failed request for any target makes the whole `mapNsuid` call
+throw. With `targetErrors: 'return'`, that target gets `status: 'error'` and an
+`error` object with `kind`, `message`, `retryable`, and `status` and
+`retryAfterMs` when known; the other targets keep their results. A failure
+reading the source, invalid input and cancellation still throw.
 
 ## Request costs
 
